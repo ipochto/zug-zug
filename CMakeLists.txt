@@ -1,71 +1,68 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.30)
 project(strataGGus LANGUAGES CXX)
 set(app strataGGus)
-
+ 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-include(FetchContent)
-
-find_package(cxxopts CONFIG QUIET)
-if (NOT cxxopts_FOUND)
-    message(STATUS "cxxopts not found, fetching with FetchContent...")
-    FetchContent_Declare(
-        cxxopts
-        GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
-        GIT_TAG        v3.3.1
-    )
-    FetchContent_MakeAvailable(cxxopts)
-endif()
-
-find_package(doctest CONFIG QUIET)
-if (NOT doctest_FOUND)
-    message(STATUS "doctest not found, fetching with FetchContent...")
-    FetchContent_Declare(
-        doctest
-        GIT_REPOSITORY https://github.com/doctest/doctest.git 
-        GIT_TAG        v2.4.12
-    )
-    FetchContent_MakeAvailable(doctest)
-endif()
-
-find_package(fmt CONFIG QUIET)
-if (NOT fmt_FOUND)
-    message(STATUS "fmt not found, fetching with FetchContent...")
-    FetchContent_Declare(
-        fmt
-        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-        GIT_TAG        11.2.0
-    )
-    FetchContent_MakeAvailable(fmt)
-endif()
-
-find_package(spdlog CONFIG QUIET)
-if (NOT spdlog_FOUND)
-    message(STATUS "spdlog not found, fetching with FetchContent...")
-    FetchContent_Declare(
-        spdlog
-        GIT_REPOSITORY https://github.com/gabime/spdlog.git
-        GIT_TAG v1.15.3
-    )
-    FetchContent_MakeAvailable(spdlog)
-endif()
-
-set(sources
-    src/main.cpp)
-
-set(include_dirs
-    src)
-
-include_directories(
-    SYSTEM
-    ${include_dirs})
-
-set(libraries
-    cxxopts::cxxopts
-    doctest::doctest
-    fmt::fmt
-    spdlog::spdlog)
+include(ThirdPartyDependencies)
+include(ProjectSources)
 
 add_executable(${app} ${sources})
 target_compile_features(${app} PRIVATE cxx_std_20)
 target_link_libraries(${app} PRIVATE ${libraries})
+
+option(ENABLE_PROFILING "Enable Profiling Flags" OFF)
+message(STATUS "Profiling enabled: ${ENABLE_PROFILING}")
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(WARNING "CMAKE_BUILD_TYPE is not set! Defaulting to Debug")
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
+endif()
+
+set(is_gcc $<CXX_COMPILER_ID:GNU>)
+set(is_clang $<CXX_COMPILER_ID:Clang>)
+set(is_msvc $<$<OR:$<CXX_COMPILER_ID:MSVC>,$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>>>)
+
+target_compile_definitions(${app} PRIVATE
+    $<$<CONFIG:Debug>:DEBUG>
+    $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+    $<$<BOOL:${ENABLE_PROFILING}>:PROFILE_BUILD>
+)
+
+target_compile_options(${app} PRIVATE 
+    # Linux
+    $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Debug>>:
+        -fno-inline
+        -fstack-protector-strong
+        -fno-omit-frame-pointer
+        -Wall -Wextra -Wpedantic
+        -Wwrite-strings
+        $<${is_gcc}:-ggdb>
+        $<${is_clang}:-glldb>
+    >
+    $<$<AND:$<BOOL:${ENABLE_PROFILING}>,$<PLATFORM_ID:Linux>>:
+        -fno-omit-frame-pointer
+    >
+
+    # Windows
+    $<$<AND:$<PLATFORM_ID:Windows>,$<CONFIG:Debug>,${is_msvc}>:
+        /Zi
+        /Oy-
+        /MP
+        /W4
+        /permissive-
+        /Zc:strictStrings
+    >
+    $<$<AND:$<BOOL:${ENABLE_PROFILING}>,${is_msvc}>:
+        /Oy-
+    >
+)
+target_link_options(${app} PRIVATE
+    $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Debug>>:
+        -rdynamic
+    >
+)
+# debug purposes
+#get_target_property(myflags ${app} COMPILE_OPTIONS)
+#message(STATUS "Compile options for ${app}: ${myflags}")
