@@ -63,11 +63,7 @@
         },
         {
             "name": "compiler-msvc",
-            "hidden": true,
-            "environment": {
-                "CC": "cl",
-                "CXX": "cl"
-            }
+            "hidden": true
         },
         {
             "name": "debug",

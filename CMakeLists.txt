@@ -20,9 +20,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
 endif()
 
-set(is_gcc $<CXX_COMPILER_ID:GNU>)
-set(is_clang $<CXX_COMPILER_ID:Clang>)
-set(is_msvc $<$<OR:$<CXX_COMPILER_ID:MSVC>,$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>>>)
+set(is_gcc "$<CXX_COMPILER_ID:GNU>")
+set(is_clang "$<CXX_COMPILER_ID:Clang>")
+set(is_msvc "$<OR:$<CXX_COMPILER_ID:MSVC>,$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>>")
 
 target_compile_definitions(${app} PRIVATE
     $<$<CONFIG:Debug>:DEBUG>
@@ -47,22 +47,23 @@ target_compile_options(${app} PRIVATE
 
     # Windows
     $<$<AND:$<PLATFORM_ID:Windows>,$<CONFIG:Debug>,${is_msvc}>:
-        /Zi
         /Oy-
-        /MP
         /W4
         /permissive-
         /Zc:strictStrings
     >
     $<$<AND:$<BOOL:${ENABLE_PROFILING}>,${is_msvc}>:
         /Oy-
+        /Gh
+        /GH
     >
+    $<$<CXX_COMPILER_ID:MSVC>:/MP>    
 )
 target_link_options(${app} PRIVATE
     $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Debug>>:
         -rdynamic
     >
+    $<$<AND:$<BOOL:${ENABLE_PROFILING}>,${is_msvc}>:
+        /PROFILE
+    >
 )
-# debug purposes
-#get_target_property(myflags ${app} COMPILE_OPTIONS)
-#message(STATUS "Compile options for ${app}: ${myflags}")

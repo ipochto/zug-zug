@@ -1,0 +1,48 @@
+name: CMake CI (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '**'
+      - '!**.md'
+      - '!documentation/**'
+      - '!.vscode/**'
+      - '!*.yml'
+      - '!*.yaml'
+      - '.github/workflows/ci-windows.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - '**'
+      - '!**.md'
+      - '!documentation/**'
+      - '!.vscode/**'
+      - '!*.yml'
+      - '!*.yaml'
+      - '.github/workflows/ci-windows.yml'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        preset: [
+            windows-clang-cl-debug,
+            # windows-msvc-release            
+        ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # windows-latest already has Ninja, clang-cl, and msvc environment
+
+      - name: Configure CMake
+        run: cmake --preset=${{ matrix.preset }}
+
+      - name: Show compile_commands.json
+        run: type build\${{ matrix.preset }}\compile_commands.json
+
+      - name: Build
+        run: cmake --build --preset=${{ matrix.preset }}

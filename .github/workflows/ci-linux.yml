@@ -1,0 +1,57 @@
+name: CMake CI (Linux)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '**'
+      - '!**.md'
+      - '!documentation/**'
+      - '!.vscode/**'
+      - '!*.yml'
+      - '!*.yaml'
+      - '.github/workflows/ci-linux.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - '**'
+      - '!**.md'
+      - '!documentation/**'
+      - '!.vscode/**'
+      - '!*.yml'
+      - '!*.yaml'
+      - '.github/workflows/ci-linux.yml'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        preset: [
+            linux-clang-debug,
+            # linux-gcc-release
+        ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Install Clang
+        if: ${{ contains(matrix.preset, 'clang') }}
+        run: |
+          sudo apt-get install -y clang
+
+      - name: Configure CMake
+        run: cmake --preset=${{ matrix.preset }}
+
+      - name: Show compile_commands.json
+        run: cat build/${{ matrix.preset }}/compile_commands.json
+
+      - name: Build
+        run: cmake --build --preset=${{ matrix.preset }}
