@@ -11,17 +11,6 @@ if (NOT cxxopts_FOUND)
     FetchContent_MakeAvailable(cxxopts)
 endif()
 
-find_package(doctest CONFIG QUIET)
-if (NOT doctest_FOUND)
-    message(STATUS "doctest not found, fetching with FetchContent...")
-    FetchContent_Declare(
-        doctest
-        GIT_REPOSITORY https://github.com/doctest/doctest.git 
-        GIT_TAG        v2.4.12
-    )
-    FetchContent_MakeAvailable(doctest)
-endif()
-
 find_package(fmt CONFIG QUIET)
 if (NOT fmt_FOUND)
     message(STATUS "fmt not found, fetching with FetchContent...")
@@ -46,6 +35,5 @@ endif()
 
 set(libraries
     cxxopts::cxxopts
-    doctest::doctest
     fmt::fmt
     spdlog::spdlog)

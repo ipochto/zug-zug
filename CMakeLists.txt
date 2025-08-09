@@ -67,3 +67,4 @@ target_link_options(${app} PRIVATE
         /PROFILE
     >
 )
+include(Tests)
