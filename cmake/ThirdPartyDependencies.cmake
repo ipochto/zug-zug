@@ -36,4 +36,5 @@ endif()
 set(libraries
     cxxopts::cxxopts
     fmt::fmt
-    spdlog::spdlog)
+    spdlog::spdlog
+)

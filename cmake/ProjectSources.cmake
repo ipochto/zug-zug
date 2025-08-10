@@ -1,9 +1,12 @@
 set(sources
-    src/main.cpp)
+    src/main.cpp
+)
 
 set(include_dirs
-    src)
+    src
+)
 
 include_directories(
     SYSTEM
-    ${include_dirs})
+    ${include_dirs}
+)
