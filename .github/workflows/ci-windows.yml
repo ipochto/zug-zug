@@ -30,7 +30,7 @@ jobs:
       matrix:
         preset: [
             windows-clang-cl-debug,
-            # windows-msvc-release            
+            # windows-msvc-release
         ]
     steps:
       - name: Checkout repository

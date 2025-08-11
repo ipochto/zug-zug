@@ -2,13 +2,23 @@ cmake_minimum_required(VERSION 3.30)
 project(strataGGus LANGUAGES CXX)
 set(app strataGGus)
  
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(ThirdPartyDependencies)
-include(ProjectSources)
+
+set(sources
+    src/main.cpp
+)
+
+set(include_dirs
+    SYSTEM
+    src
+)
 
 add_executable(${app} ${sources})
+target_include_directories(${app} PRIVATE ${include_dirs})
+
 target_compile_features(${app} PRIVATE cxx_std_20)
 target_link_libraries(${app} PRIVATE ${libraries})
 
