@@ -9,6 +9,7 @@ include(ThirdPartyDependencies)
 
 set(sources
     src/main.cpp
+    src/strataGGus/strataGGus.cpp
 )
 
 set(include_dirs

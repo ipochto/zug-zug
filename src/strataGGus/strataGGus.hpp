@@ -1,0 +1,1 @@
+extern int strataGGusMain(int argc, char* argv[]);
