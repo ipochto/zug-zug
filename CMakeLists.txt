@@ -26,7 +26,7 @@ set(engine_libraries
 )
 
 add_library(${engine_lib} STATIC ${engine_sources})
-target_include_directories(${engine_lib} PRIVATE ${engine_include_dirs})
+target_include_directories(${engine_lib} PUBLIC ${engine_include_dirs})
 
 target_compile_features(${engine_lib} PRIVATE cxx_std_20)
 target_link_libraries(${engine_lib} PUBLIC ${engine_libraries})
