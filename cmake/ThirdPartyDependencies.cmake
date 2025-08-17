@@ -59,11 +59,3 @@ FetchContent_Declare(
   GIT_TAG        v3.5.0
 )
 FetchContent_MakeAvailable(sol2)
-
-set(libraries
-    cxxopts::cxxopts
-    fmt::fmt
-    spdlog::spdlog
-    lua::lua51
-    sol2::sol2
-)

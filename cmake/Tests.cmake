@@ -23,7 +23,10 @@ if(BUILD_TESTING)
         tests/dummy.cpp
     )
     target_compile_features(tests PRIVATE cxx_std_20)
-    target_link_libraries(tests PRIVATE doctest::doctest)
+    target_link_libraries(tests PRIVATE
+        doctest::doctest
+        strataGGus::enGGine
+    )
 
     doctest_discover_tests(tests)
 endif()
