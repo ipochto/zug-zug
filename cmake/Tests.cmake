@@ -25,7 +25,7 @@ if(BUILD_TESTING)
     target_compile_features(tests PRIVATE cxx_std_20)
     target_link_libraries(tests PRIVATE
         doctest::doctest
-        strataGGus::enGGine
+        zug-zug::engine
     )
 
     doctest_discover_tests(tests)

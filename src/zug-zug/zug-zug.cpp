@@ -8,8 +8,8 @@
 
 void parseCmdLineArguments(int argc, char* argv[])
 {
-	auto options = cxxopts::Options{"strataGGus", 
-									"Just an en[GG]ine for classical 2D RTS games."};
+	auto options = cxxopts::Options{"Zug-Zug", 
+									"Just an engine for classical 2D RTS games. Dabu..."};
 	options.add_options()
 		("h,help", "Print usage")
 		("d,data", "Path to game data", cxxopts::value<fs::path>());;
@@ -33,7 +33,7 @@ void parseCmdLineArguments(int argc, char* argv[])
 	}
 }
 
-int strataGGusMain(int argc, char* argv[])
+int zzMain(int argc, char* argv[])
 {
 	parseCmdLineArguments(argc, argv);
 	return 0;
