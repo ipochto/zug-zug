@@ -6,10 +6,23 @@ set(engine_lib enGGine)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(WARNING "CMAKE_BUILD_TYPE is not set! Defaulting to Debug")
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
+endif()
+
+option(ENABLE_PROFILING "Enable Profiling Flags" OFF)
+message(STATUS "Profiling enabled: ${ENABLE_PROFILING}")
+
 include(ThirdPartyDependencies)
 
 set(engine_sources
     src/strataGGus/strataGGus.cpp
+)
+set(engine_headers
+    src/scripts/sol2.hpp
+    src/strataGGus/strataGGus.hpp
+    src/utils/filesystem.hpp
 )
 
 set(engine_include_dirs
@@ -25,19 +38,15 @@ set(engine_libraries
     sol2::sol2
 )
 
-add_library(${engine_lib} STATIC ${engine_sources})
+add_library(${engine_lib} STATIC)
+target_sources(${engine_lib} PRIVATE
+    ${engine_sources} 
+    ${engine_headers}
+)
 target_include_directories(${engine_lib} PUBLIC ${engine_include_dirs})
 
 target_compile_features(${engine_lib} PRIVATE cxx_std_20)
 target_link_libraries(${engine_lib} PUBLIC ${engine_libraries})
-
-option(ENABLE_PROFILING "Enable Profiling Flags" OFF)
-message(STATUS "Profiling enabled: ${ENABLE_PROFILING}")
-
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    message(WARNING "CMAKE_BUILD_TYPE is not set! Defaulting to Debug")
-    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
-endif()
 
 set(is_gcc "$<CXX_COMPILER_ID:GNU>")
 set(is_clang "$<CXX_COMPILER_ID:Clang>")
