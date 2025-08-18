@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.30)
-project(strataGGus LANGUAGES CXX)
-set(app strataGGus)
-set(engine_lib enGGine)
+project(zug-zug LANGUAGES CXX)
+set(app zug-zug)
+set(engine_lib engine)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -17,11 +17,11 @@ message(STATUS "Profiling enabled: ${ENABLE_PROFILING}")
 include(ThirdPartyDependencies)
 
 set(engine_sources
-    src/strataGGus/strataGGus.cpp
+    src/zug-zug/zug-zug.cpp
 )
 set(engine_headers
     src/scripts/sol2.hpp
-    src/strataGGus/strataGGus.hpp
+    src/zug-zug/zug-zug.hpp
     src/utils/filesystem.hpp
 )
 
@@ -95,10 +95,10 @@ target_link_options(${engine_lib} PRIVATE
         /PROFILE
     >
 )
-add_library(strataGGus::enGGine ALIAS ${engine_lib})
+add_library(zug-zug::engine ALIAS ${engine_lib})
 
 add_executable(${app} src/main.cpp)
 target_include_directories(${app} PRIVATE ${engine_include_dirs})
-target_link_libraries(${app} PRIVATE strataGGus::enGGine)
+target_link_libraries(${app} PRIVATE zug-zug::engine)
 
 include(Tests)

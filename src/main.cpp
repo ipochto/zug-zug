@@ -1,6 +1,6 @@
-#include "strataGGus/strataGGus.hpp"
+#include "zug-zug/zug-zug.hpp"
 
 int main(int argc, char* argv[])
 {
-	return strataGGusMain(argc, argv);;
+	return zzMain(argc, argv);;
 }
