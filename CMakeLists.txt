@@ -20,17 +20,24 @@ message(STATUS "Coverage enabled: ${ENABLE_COVERAGE}")
 include(ThirdPartyDependencies)
 
 set(engine_sources
+    src/scripts/lua/runtime.cpp
+
     src/zug-zug/zug-zug.cpp
 )
 set(engine_headers
-    src/scripts/sol2.hpp
-    src/zug-zug/zug-zug.hpp
+    src/scripts/lua/runtime.hpp
+    src/scripts/lua/sol2.hpp
+
+    src/utils/optional_ref.hpp
     src/utils/filesystem.hpp
+
+    src/zug-zug/zug-zug.hpp
 )
 
 set(engine_include_dirs
     SYSTEM
     src
+    src/scripts
 )
 
 set(engine_libraries

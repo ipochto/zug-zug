@@ -1,0 +1,149 @@
+#pragma once
+
+#include <set>
+#include <string_view>
+#include <vector>
+
+#include "lua/sol2.hpp"
+#include "utils/filesystem.hpp"
+#include "utils/optional_ref.hpp"
+
+
+class LuaState
+{
+public:
+	void require(sol::lib lib);
+
+	sol::state state;
+
+private:
+	bool isLibraryLoaded(sol::lib lib) const { return loadedLibs.contains(lib); }
+	void loadLibrary(sol::lib lib);
+
+	std::set<sol::lib> loadedLibs;
+};
+
+// Sandboxed lua runtime
+class LuaRuntime
+{
+public:
+	enum class Presets {Empty, Base, Configs};
+
+	explicit LuaRuntime(LuaState &state, Presets preset = Presets::Empty);
+
+    template <typename Key>
+    auto operator[](Key&& key) {
+        return sandbox[std::forward<Key>(key)];
+    }
+	auto run(std::string_view script) { 
+		return lua.state.script(script, sandbox);
+	}
+	auto run(const fs::path &scriptFile) { 
+		return lua.state.script_file(scriptFile.string(), sandbox);
+	}
+
+private:
+	using NamesList = std::vector<std::string_view>;
+	using LibsList = std::vector<sol::lib>;
+	using SandboxPresetsMap = std::unordered_map<Presets, LibsList>;
+
+	struct LibSymbolsRules {
+		bool allowedAllExceptRestricted {false};
+		NamesList allowed {}; // This will be ignored if allowedAllExceptRestricted is set
+		NamesList restricted {};
+	};
+
+	using LibsSandboxingRulesMap = std::unordered_map<sol::lib, LibSymbolsRules>;
+
+	auto checkRulesFor(sol::lib lib)-> opt_cref<LibSymbolsRules>;
+	void loadLibs(const LibsList &names);
+	void loadLib(sol::lib lib);
+	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
+	
+	//	sol::function_result loadfile(sol::stack_object file);
+	//	sol::function_result dofile(sol::stack_object file);
+
+	LuaState &lua;
+	sol::environment sandbox;
+	std::set<sol::lib> loadedLibs;
+
+	static const SandboxPresetsMap sandboxPresets;
+	static const LibsSandboxingRulesMap libsSandboxingRules;
+};
+
+inline const LuaRuntime::SandboxPresetsMap
+LuaRuntime::sandboxPresets {
+	{Presets::Empty, {}},
+	{Presets::Base, {
+			sol::lib::base,
+			sol::lib::table}},
+	{Presets::Configs, {
+			sol::lib::base,
+			sol::lib::table,
+			sol::lib::string}}
+};
+
+inline const LuaRuntime::LibsSandboxingRulesMap
+LuaRuntime::libsSandboxingRules {
+	{sol::lib::base, {
+		.allowed = {"assert", "error", "ipairs", "next", "pairs", "pcall", "select",
+					"tonumber", "tostring", "type", "unpack", "_VERSION", "xpcall", "print"}}},
+	{sol::lib::coroutine, {
+		.allowedAllExceptRestricted = true}},
+	{sol::lib::math, {
+		.allowedAllExceptRestricted = true,
+		.restricted = {"random", "randomseed"}}},
+	{sol::lib::os, {
+		.allowed = {"clock", "date", "difftime", "time"}}},
+	{sol::lib::string, {
+		.allowedAllExceptRestricted = true,
+		.restricted = {"dump"}}},
+	{sol::lib::table, {
+		.allowedAllExceptRestricted = true}}
+};
+
+namespace lua
+{
+	namespace details
+	{
+		using LibsLookupTable = std::unordered_map<sol::lib, std::string_view>;
+
+		inline const LibsLookupTable libsLookupTable = {
+			{sol::lib::base,		"base"},
+			{sol::lib::bit32,		"bit32"}, // Lua 5.2+
+			{sol::lib::coroutine,	"coroutine"},
+			{sol::lib::debug,		"debug"},
+			{sol::lib::ffi,			"ffi"}, // LuaJIT only
+			{sol::lib::io,			"io"},
+			{sol::lib::jit,			"jit"}, // LuaJIT only
+			{sol::lib::math,		"math"},
+			{sol::lib::os,			"os"},
+			{sol::lib::package,		"package"},
+			{sol::lib::string,		"string"},
+			{sol::lib::table,		"table"},
+			{sol::lib::utf8,		"utf8"} // Lua 5.3+
+		};
+	}
+
+	inline auto libName(sol::lib lib)
+		-> std::optional<std::string_view>
+	{
+		const auto &names = lua::details::libsLookupTable;
+		const auto it = names.find(lib);
+		if (it == names.end()) {
+			return std::nullopt;
+		}
+		return it->second;
+	}
+
+	inline auto libByName(std::string_view libName)
+		-> std::optional<sol::lib>
+	{
+		for (const auto [lib, name] : lua::details::libsLookupTable) {
+			if (name == libName) {
+				return lib;
+			}
+		}
+		return std::nullopt;
+	}
+}
