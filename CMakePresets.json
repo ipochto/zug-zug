@@ -12,6 +12,11 @@
             "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            },
+            "vendor": {
+                "microsoft.com/VisualStudioCode": {
+                    "copyCompileCommands": "${sourceDir}/compile_commands.json"
+                }
             }
         },
         {
