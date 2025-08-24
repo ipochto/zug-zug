@@ -1,5 +1,4 @@
 #include <cxxopts.hpp>
-#include <iostream>
 #include <fmt/base.h>
 #include <fmt/ranges.h>
 #include <spdlog/spdlog.h>
