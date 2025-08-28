@@ -27,20 +27,21 @@ private:
 class LuaRuntime
 {
 public:
-	enum class Presets {Empty, Base, Configs};
+	enum class Presets {Empty, Base, Configs, Custom};
 
 	explicit LuaRuntime(LuaState &state, Presets preset = Presets::Empty);
 
-    template <typename Key>
-    auto operator[](Key&& key) {
-        return sandbox[std::forward<Key>(key)];
-    }
+	template <typename Key>
+	auto operator[](Key&& key) {
+		return sandbox[std::forward<Key>(key)];
+	}
 	auto run(std::string_view script) { 
 		return lua.state.script(script, sandbox);
 	}
-	auto run(const fs::path &scriptFile) { 
+	auto runFile(const fs::path &scriptFile) { 
 		return lua.state.script_file(scriptFile.string(), sandbox);
 	}
+	bool require(sol::lib lib);
 
 private:
 	using NamesList = std::vector<std::string_view>;
@@ -57,7 +58,7 @@ private:
 
 	auto checkRulesFor(sol::lib lib)-> opt_cref<LibSymbolsRules>;
 	void loadLibs(const LibsList &names);
-	void loadLib(sol::lib lib);
+	bool loadLib(sol::lib lib);
 	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
 	
 	//	sol::function_result loadfile(sol::stack_object file);
@@ -66,6 +67,7 @@ private:
 	LuaState &lua;
 	sol::environment sandbox;
 	std::set<sol::lib> loadedLibs;
+	Presets preset;
 
 	static const SandboxPresetsMap sandboxPresets;
 	static const LibsSandboxingRulesMap libsSandboxingRules;
@@ -75,12 +77,13 @@ inline const LuaRuntime::SandboxPresetsMap
 LuaRuntime::sandboxPresets {
 	{Presets::Empty, {}},
 	{Presets::Base, {
-			sol::lib::base,
-			sol::lib::table}},
+		sol::lib::base,
+		sol::lib::table}},
 	{Presets::Configs, {
-			sol::lib::base,
-			sol::lib::table,
-			sol::lib::string}}
+		sol::lib::base,
+		sol::lib::table,
+		sol::lib::string}},
+	{Presets::Custom, {}}		
 };
 
 inline const LuaRuntime::LibsSandboxingRulesMap

@@ -17,9 +17,18 @@ void LuaState::loadLibrary(sol::lib lib)
 LuaRuntime::LuaRuntime(LuaState &state, Presets preset/* = Presets::Empty */)
 	: lua(state)
 	, sandbox(lua.state, sol::create)
+	, preset(preset)
 {
 	sandbox["_G"] = sandbox;
 	loadLibs(sandboxPresets.at(preset));
+};
+
+bool LuaRuntime::require (sol::lib lib)
+{ 
+	if (preset == Presets::Custom) {
+		return loadLib(lib);
+	}
+	return false;
 };
 
 void LuaRuntime::loadLibs(const LibsList &libs)
@@ -39,14 +48,15 @@ auto LuaRuntime::checkRulesFor(sol::lib lib)
 	return it->second;
 }
 
-void LuaRuntime::loadLib(sol::lib lib)
+bool LuaRuntime::loadLib(sol::lib lib)
 {
 	const auto rules = checkRulesFor(lib);
 	if (!rules) {
-		return;
+		return false;
 	}
 	lua.require(lib);
 	addLibToSandbox(lib, *rules);
+	return true;
 }
 
 void LuaRuntime::addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules)
