@@ -12,12 +12,19 @@
 class LuaState
 {
 public:
-	void require(sol::lib lib);
+	LuaState() noexcept = default;
+	LuaState(const LuaState&) = delete;
+	LuaState(const LuaState&&) = delete;
+	LuaState& operator=(const LuaState&) = delete;
+	LuaState& operator=(const LuaState&&) = delete;
+
+	[[nodiscard]]
+	bool require(sol::lib lib);
 
 	sol::state state;
 
 private:
-	bool isLibraryLoaded(sol::lib lib) const { return loadedLibs.contains(lib); }
+	bool isLibraryLoaded(sol::lib lib) const noexcept { return loadedLibs.contains(lib); }
 	void loadLibrary(sol::lib lib);
 
 	std::set<sol::lib> loadedLibs;
@@ -30,9 +37,15 @@ public:
 	enum class Presets {Empty, Base, Configs, Custom};
 
 	explicit LuaRuntime(LuaState &state, Presets preset = Presets::Empty);
+	LuaRuntime(const LuaRuntime&) = delete;
+	LuaRuntime(const LuaRuntime&&) = delete;
+	LuaRuntime& operator=(const LuaRuntime&) = delete;
+	LuaRuntime& operator=(const LuaRuntime&&) = delete;
+
+	~LuaRuntime() = default;
 
 	template <typename Key>
-	auto operator[](Key&& key) {
+	auto operator[](Key&& key) noexcept {
 		return sandbox[std::forward<Key>(key)];
 	}
 	auto run(std::string_view script) { 
@@ -41,6 +54,8 @@ public:
 	auto runFile(const fs::path &scriptFile) { 
 		return lua.state.script_file(scriptFile.string(), sandbox);
 	}
+	
+	[[nodiscard]]
 	bool require(sol::lib lib);
 
 private:
@@ -56,7 +71,7 @@ private:
 
 	using LibsSandboxingRulesMap = std::unordered_map<sol::lib, LibSymbolsRules>;
 
-	auto checkRulesFor(sol::lib lib)-> opt_cref<LibSymbolsRules>;
+	auto checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>;
 	void loadLibs(const LibsList &names);
 	bool loadLib(sol::lib lib);
 	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
@@ -128,7 +143,8 @@ namespace lua
 		};
 	}
 
-	inline auto libName(sol::lib lib)
+	[[nodiscard]]
+	inline auto libName(sol::lib lib) noexcept
 		-> std::optional<std::string_view>
 	{
 		const auto &names = lua::details::libsLookupTable;
@@ -139,7 +155,8 @@ namespace lua
 		return it->second;
 	}
 
-	inline auto libByName(std::string_view libName)
+	[[nodiscard]]
+	inline auto libByName(std::string_view libName) noexcept
 		-> std::optional<sol::lib>
 	{
 		for (const auto [lib, name] : lua::details::libsLookupTable) {

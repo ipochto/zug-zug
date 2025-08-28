@@ -5,7 +5,7 @@
 #include <functional>
 
 template <typename T>
-class optional_ref
+class [[nodiscard]] optional_ref
 {
 public:
 	optional_ref() = default;

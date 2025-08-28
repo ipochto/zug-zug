@@ -1,10 +1,11 @@
 #include "lua/runtime.hpp"
 
-void LuaState::require(sol::lib lib)
+bool LuaState::require(sol::lib lib)
 { 
 	if (not isLibraryLoaded(lib)) {
 		loadLibrary(lib);
 	}
+	return isLibraryLoaded(lib);
 }
 
 void LuaState::loadLibrary(sol::lib lib)
@@ -12,7 +13,6 @@ void LuaState::loadLibrary(sol::lib lib)
 	state.open_libraries(lib);
 	loadedLibs.insert(lib);
 }
-
 
 LuaRuntime::LuaRuntime(LuaState &state, Presets preset/* = Presets::Empty */)
 	: lua(state)
@@ -38,7 +38,7 @@ void LuaRuntime::loadLibs(const LibsList &libs)
 	}
 }
 
-auto LuaRuntime::checkRulesFor(sol::lib lib)
+auto LuaRuntime::checkRulesFor(sol::lib lib) const noexcept
 	-> opt_cref<LibSymbolsRules> 
 {
 	const auto it = libsSandboxingRules.find(lib);
@@ -54,7 +54,9 @@ bool LuaRuntime::loadLib(sol::lib lib)
 	if (!rules) {
 		return false;
 	}
-	lua.require(lib);
+	if (!lua.require(lib)) {
+		return false;
+	}
 	addLibToSandbox(lib, *rules);
 	return true;
 }

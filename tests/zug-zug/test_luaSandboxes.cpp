@@ -7,7 +7,7 @@ TEST_CASE("LuaState require loads libraries") {
 
 	REQUIRE_FALSE(lua.state["assert"].valid());
 
-	lua.require(sol::lib::base);
+	CHECK(lua.require(sol::lib::base));
 	REQUIRE(lua.state["assert"].valid());
 }
 
