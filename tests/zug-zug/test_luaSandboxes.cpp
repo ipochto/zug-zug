@@ -13,23 +13,33 @@ TEST_CASE("LuaState require loads libraries") {
 
 TEST_CASE("LuaRuntime empty preset has no functions") {
 	LuaState lua;
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Empty);
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
 	CHECK_FALSE(sandbox["assert"].valid());
-	CHECK_FALSE(sandbox["type"].valid());
 }
 
-TEST_CASE("LuaRuntime empty preset do not allows to load libraries manually") {
+TEST_CASE("LuaState require does not loads libraries into LuaRuntime") {
 	LuaState lua;
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Empty);
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
+	CHECK_FALSE(lua.state["assert"].valid());
 	CHECK_FALSE(sandbox["assert"].valid());
-	CHECK_FALSE(sandbox["type"].valid());
 
-	CHECK_FALSE(sandbox.require(sol::lib::base));
+	CHECK(lua.require(sol::lib::base));
 
+	CHECK(lua.state["assert"].valid());
 	CHECK_FALSE(sandbox["assert"].valid());
-	CHECK_FALSE(sandbox["type"].valid());
+}
+
+TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries manually") {
+	LuaState lua;
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
+
+	REQUIRE_FALSE(sandbox["string"].valid());
+
+	CHECK_FALSE(sandbox.require(sol::lib::string));
+
+	CHECK_FALSE(sandbox["string"].valid());
 }
 
 TEST_CASE("LuaRuntime custom preset allows to load libraries manually") {

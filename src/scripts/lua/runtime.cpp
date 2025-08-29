@@ -14,7 +14,7 @@ void LuaState::loadLibrary(sol::lib lib)
 	loadedLibs.insert(lib);
 }
 
-LuaRuntime::LuaRuntime(LuaState &state, Presets preset/* = Presets::Empty */)
+LuaRuntime::LuaRuntime(LuaState &state, Presets preset/* = Presets::Base */)
 	: lua(state)
 	, sandbox(lua.state, sol::create)
 	, preset(preset)

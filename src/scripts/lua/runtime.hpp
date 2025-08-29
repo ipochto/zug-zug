@@ -34,9 +34,9 @@ private:
 class LuaRuntime
 {
 public:
-	enum class Presets {Empty, Base, Configs, Custom};
+	enum class Presets {Base, Configs, Custom};
 
-	explicit LuaRuntime(LuaState &state, Presets preset = Presets::Empty);
+	explicit LuaRuntime(LuaState &state, Presets preset = Presets::Base);
 	LuaRuntime(const LuaRuntime&) = delete;
 	LuaRuntime(const LuaRuntime&&) = delete;
 	LuaRuntime& operator=(const LuaRuntime&) = delete;
@@ -90,7 +90,6 @@ private:
 
 inline const LuaRuntime::SandboxPresetsMap
 LuaRuntime::sandboxPresets {
-	{Presets::Empty, {}},
 	{Presets::Base, {
 		sol::lib::base,
 		sol::lib::table}},
