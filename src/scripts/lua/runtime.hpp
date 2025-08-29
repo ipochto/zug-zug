@@ -141,28 +141,12 @@ namespace lua
 			{sol::lib::utf8,		"utf8"} // Lua 5.3+
 		};
 	}
+	[[nodiscard]]
+	auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>;
 
 	[[nodiscard]]
-	inline auto libName(sol::lib lib) noexcept
-		-> std::optional<std::string_view>
-	{
-		const auto &names = lua::details::libsLookupTable;
-		const auto it = names.find(lib);
-		if (it == names.end()) {
-			return std::nullopt;
-		}
-		return it->second;
-	}
+	auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>;
 
 	[[nodiscard]]
-	inline auto libByName(std::string_view libName) noexcept
-		-> std::optional<sol::lib>
-	{
-		for (const auto [lib, name] : lua::details::libsLookupTable) {
-			if (name == libName) {
-				return lib;
-			}
-		}
-		return std::nullopt;
-	}
+	std::string toString(sol::object obj);
 }

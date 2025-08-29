@@ -1,5 +1,40 @@
 #include "lua/runtime.hpp"
 
+namespace lua
+{
+	auto libName(sol::lib lib) noexcept
+		-> std::optional<std::string_view>
+	{
+		const auto &names = lua::details::libsLookupTable;
+		const auto it = names.find(lib);
+		if (it == names.end()) {
+			return std::nullopt;
+		}
+		return it->second;
+	}
+
+	auto libByName(std::string_view libName) noexcept
+		-> std::optional<sol::lib>
+	{
+		for (const auto [lib, name] : lua::details::libsLookupTable) {
+			if (name == libName) {
+				return lib;
+			}
+		}
+		return std::nullopt;
+	}
+
+	std::string toString(sol::object obj)
+	{
+		sol::state_view lua(obj.lua_state());
+		if (!lua["tostring"].valid()) {
+			// log error
+			return {};
+		}
+		return lua["tostring"](obj).get<std::string>();
+	}
+}
+
 bool LuaState::require(sol::lib lib)
 { 
 	if (not isLibraryLoaded(lib)) {
