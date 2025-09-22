@@ -30,7 +30,7 @@ jobs:
       matrix:
         preset: [
             linux-clang-debug,
-            # linux-gcc-release
+            #linux-gcc-release
         ]
 
     steps:
@@ -43,9 +43,9 @@ jobs:
           sudo apt-get install -y ninja-build
 
       - name: Install Clang
-        if: ${{ contains(matrix.preset, 'clang') }}
+        if: contains(matrix.preset, 'clang')
         run: |
-          sudo apt-get install -y clang
+          sudo apt-get install -y llvm clang
 
       - name: Configure CMake
         run: cmake --preset=${{ matrix.preset }}
@@ -54,7 +54,7 @@ jobs:
         run: cat build/${{ matrix.preset }}/compile_commands.json
 
       - name: Build
-        run: cmake --build --preset=${{ matrix.preset }}
+        run: cmake --build --preset=${{ matrix.preset }} -- -j$(nproc)
 
       - name: Run Tests
         working-directory: build/${{ matrix.preset }}
