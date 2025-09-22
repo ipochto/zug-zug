@@ -27,6 +27,17 @@ if(BUILD_TESTING)
         doctest::doctest
         zug-zug::engine
     )
-
+    target_compile_options(tests PRIVATE
+        $<$<AND:$<BOOL:${ENABLE_COVERAGE}>,$<PLATFORM_ID:Linux>>:
+            $<${is_gcc}: --coverage>
+            $<${is_clang}: -fprofile-instr-generate -fcoverage-mapping>
+        >
+    )
+    target_link_options(tests PRIVATE
+        $<$<AND:$<BOOL:${ENABLE_COVERAGE}>,$<PLATFORM_ID:Linux>>:
+            $<${is_gcc}: --coverage>
+            $<${is_clang}: -fprofile-instr-generate>
+        >
+    )
     doctest_discover_tests(tests)
 endif()

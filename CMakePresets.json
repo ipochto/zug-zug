@@ -129,6 +129,21 @@
             ]
         },
         {
+            "name": "linux-gcc-coverage",
+            "displayName": "Coverage Linux GCC",
+            "description": "Build with coverage information",
+            "inherits": [
+                "base",
+                "platform-linux",
+                "generator-ninja",
+                "compiler-gcc",
+                "debug"
+            ],
+            "cacheVariables": {
+                "ENABLE_COVERAGE": "ON"
+            }
+        },        
+        {
             "name": "linux-clang-debug",
             "displayName": "Debug Linux Clang",
             "description": "Build with debug information and no optimizations",
@@ -163,6 +178,21 @@
                 "compiler-clang",
                 "profile"
             ]
+        },
+        {
+            "name": "linux-clang-coverage",
+            "displayName": "Coverage Linux Clang",
+            "description": "Build with coverage information",
+            "inherits": [
+                "base",
+                "platform-linux",
+                "generator-ninja",
+                "compiler-clang",
+                "debug"
+            ],
+            "cacheVariables": {
+                "ENABLE_COVERAGE": "ON"
+            }
         },
         {
             "name": "windows-clang-cl-debug",
@@ -254,6 +284,11 @@
             "configuration": "RelWithDebInfo"
         },
         {
+            "name": "linux-gcc-coverage",
+            "configurePreset": "linux-gcc-coverage",
+            "configuration": "Debug"
+        },
+        {
             "name": "linux-clang-debug",
             "configurePreset": "linux-clang-debug",
             "configuration": "Debug"
@@ -267,6 +302,11 @@
             "name": "linux-clang-profile",
             "configurePreset": "linux-clang-profile",
             "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "linux-clang-coverage",
+            "configurePreset": "linux-clang-coverage",
+            "configuration": "Debug"
         },
         {
             "name": "windows-clang-cl-debug",

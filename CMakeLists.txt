@@ -14,6 +14,9 @@ endif()
 option(ENABLE_PROFILING "Enable Profiling Flags" OFF)
 message(STATUS "Profiling enabled: ${ENABLE_PROFILING}")
 
+option(ENABLE_COVERAGE "Enable Coverage Flags" OFF)
+message(STATUS "Coverage enabled: ${ENABLE_COVERAGE}")
+
 include(ThirdPartyDependencies)
 
 set(engine_sources
@@ -66,11 +69,15 @@ target_compile_options(${engine_lib} PRIVATE
         -fno-omit-frame-pointer
         -Wall -Wextra -Wpedantic
         -Wwrite-strings
-        $<${is_gcc}:-ggdb>
-        $<${is_clang}:-glldb>
+        $<${is_gcc}: -ggdb>
+        $<${is_clang}: -glldb>
     >
     $<$<AND:$<BOOL:${ENABLE_PROFILING}>,$<PLATFORM_ID:Linux>>:
         -fno-omit-frame-pointer
+    >
+    $<$<AND:$<BOOL:${ENABLE_COVERAGE}>,$<PLATFORM_ID:Linux>>:
+        $<${is_gcc}: --coverage>
+        $<${is_clang}: -fprofile-instr-generate -fcoverage-mapping>
     >
 
     # Windows
@@ -93,6 +100,10 @@ target_link_options(${engine_lib} PRIVATE
     >
     $<$<AND:$<BOOL:${ENABLE_PROFILING}>,${is_msvc}>:
         /PROFILE
+    >
+    $<$<AND:$<BOOL:${ENABLE_COVERAGE}>,$<PLATFORM_ID:Linux>>:
+        $<${is_gcc}: --coverage>
+        $<${is_clang}: -fprofile-instr-generate>
     >
 )
 add_library(zug-zug::engine ALIAS ${engine_lib})
