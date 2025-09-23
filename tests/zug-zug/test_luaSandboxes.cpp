@@ -7,8 +7,9 @@ TEST_CASE("LuaState require loads libraries") {
 
 	REQUIRE_FALSE(lua.state["assert"].valid());
 
-	CHECK(lua.require(sol::lib::base));
-	REQUIRE(lua.state["assert"].valid());
+	REQUIRE(lua.require(sol::lib::base));
+
+	CHECK(lua.state["assert"].valid());
 }
 
 TEST_CASE("LuaRuntime empty preset has no functions") {
@@ -22,10 +23,10 @@ TEST_CASE("LuaState require does not loads libraries into LuaRuntime") {
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
-	CHECK_FALSE(lua.state["assert"].valid());
-	CHECK_FALSE(sandbox["assert"].valid());
+	REQUIRE_FALSE(lua.state["assert"].valid());
+	REQUIRE_FALSE(sandbox["assert"].valid());
 
-	CHECK(lua.require(sol::lib::base));
+	REQUIRE(lua.require(sol::lib::base));
 
 	CHECK(lua.state["assert"].valid());
 	CHECK_FALSE(sandbox["assert"].valid());
@@ -37,7 +38,7 @@ TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries man
 
 	REQUIRE_FALSE(sandbox["string"].valid());
 
-	CHECK_FALSE(sandbox.require(sol::lib::string));
+	REQUIRE_FALSE(sandbox.require(sol::lib::string));
 
 	CHECK_FALSE(sandbox["string"].valid());
 }
@@ -46,10 +47,10 @@ TEST_CASE("LuaRuntime custom preset allows to load libraries manually") {
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
-	CHECK_FALSE(sandbox["assert"].valid());
-	CHECK_FALSE(sandbox["type"].valid());
+	REQUIRE_FALSE(sandbox["assert"].valid());
+	REQUIRE_FALSE(sandbox["type"].valid());
 
-	CHECK(sandbox.require(sol::lib::base));
+	REQUIRE(sandbox.require(sol::lib::base));
 
 	CHECK(sandbox["assert"].valid());
 	CHECK(sandbox["type"].valid());
@@ -69,9 +70,10 @@ TEST_CASE("LuaRuntime restricted string functions not available") {
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
-	CHECK(sandbox.require(sol::lib::string));
+	REQUIRE(sandbox.require(sol::lib::string));
 
-	REQUIRE(sandbox["string"]["upper"].valid());
+	REQUIRE(sandbox["string"].valid());
+	CHECK(sandbox["string"]["upper"].valid());
 	CHECK_FALSE(sandbox["string"]["dump"].valid());
 }
 
@@ -79,9 +81,10 @@ TEST_CASE("LuaRuntime restricted os functions not available") {
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
-	CHECK(sandbox.require(sol::lib::os));
+	REQUIRE(sandbox.require(sol::lib::os));
 
-	REQUIRE(sandbox["os"]["clock"].valid());
+	REQUIRE(sandbox["os"].valid());
+	CHECK(sandbox["os"]["clock"].valid());
 	CHECK_FALSE(sandbox["os"]["execute"].valid());
 }
 
