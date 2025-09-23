@@ -74,7 +74,7 @@ target_compile_options(${engine_lib} PRIVATE
         -fno-inline
         -fstack-protector-strong
         -fno-omit-frame-pointer
-        -Wall -Wextra -Wpedantic
+        -Wall -Wextra -Wpedantic -Wreorder
         -Wwrite-strings
         $<${is_gcc}: -ggdb>
         $<${is_clang}: -glldb>
