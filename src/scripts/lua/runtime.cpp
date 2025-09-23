@@ -1,4 +1,5 @@
 #include "lua/runtime.hpp"
+#include <fmt/core.h>
 
 namespace lua
 {
@@ -73,6 +74,14 @@ bool LuaRuntime::require (sol::lib lib)
 	return false;
 };
 
+bool LuaRuntime::enablePrint()
+{
+	if (!lua.require(sol::lib::base)) {
+		return false;
+	}
+	sandbox.set_function("print", &LuaRuntime::print, this);
+	return true;
+};
 
 void LuaRuntime::loadLibs(const SolLibContainer auto &libs)
 {
@@ -135,4 +144,16 @@ void LuaRuntime::addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules)
 	for (const auto &name : rules.restricted) {
 		dst[name] = sol::nil;
 	}
+}
+
+void LuaRuntime::print(sol::variadic_args args)
+{
+	std::string result;
+	for (auto &&arg : args) {
+		result += lua::toString(arg) + " ";
+	}
+	if (!result.empty()) {
+		result.pop_back(); // remove last space separator
+	}
+	fmt::println("[lua sandbox]:> {}", result);
 }

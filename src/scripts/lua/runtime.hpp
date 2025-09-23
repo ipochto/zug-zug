@@ -70,6 +70,8 @@ public:
 	[[nodiscard]]
 	bool require(sol::lib lib);
 
+	bool enablePrint();
+
 private:
 	using NamesList = std::vector<std::string_view>;
 	using LibsList = std::vector<sol::lib>;
@@ -87,9 +89,11 @@ private:
 	void loadLibs(const SolLibContainer auto &libs);
 	bool loadLib(sol::lib lib);
 	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
-	
-	//	sol::function_result loadfile(sol::stack_object file);
-	//	sol::function_result dofile(sol::stack_object file);
+
+	//	loadfile(sol::stack_object file); -> sandbox["loadfile"]
+	//	dofile(sol::stack_object file); -> sandbox["dofile"]
+	//	require -> sandbox["require"]
+	void print(sol::variadic_args args);
 
 	LuaState &lua;
 	sol::environment sandbox;
