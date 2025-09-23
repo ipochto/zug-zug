@@ -49,14 +49,21 @@ void LuaState::loadLibrary(sol::lib lib)
 	loadedLibs.insert(lib);
 }
 
-LuaRuntime::LuaRuntime(LuaState &state, Presets preset/* = Presets::Base */)
-	: lua(state)
-	, sandbox(lua.state, sol::create)
-	, preset(preset)
+void LuaRuntime::reset(bool doCollectGrbg /* = false */)
 {
+	sandbox = sol::environment(lua.state, sol::create);
 	sandbox["_G"] = sandbox;
-	loadLibs(sandboxPresets.at(preset));
-};
+
+	if (loadedLibs.empty()) {
+		loadLibs(sandboxPresets.at(preset));
+	} else {
+		loadLibs(loadedLibs);
+	}
+
+	if(doCollectGrbg) {
+		lua.state.collect_garbage();
+	}
+}
 
 bool LuaRuntime::require (sol::lib lib)
 { 
@@ -66,7 +73,8 @@ bool LuaRuntime::require (sol::lib lib)
 	return false;
 };
 
-void LuaRuntime::loadLibs(const LibsList &libs)
+
+void LuaRuntime::loadLibs(const SolLibContainer auto &libs)
 {
 	for (const auto lib : libs) {
 		loadLib(lib);
@@ -93,6 +101,7 @@ bool LuaRuntime::loadLib(sol::lib lib)
 		return false;
 	}
 	addLibToSandbox(lib, *rules);
+	loadedLibs.insert(lib);
 	return true;
 }
 

@@ -8,6 +8,10 @@
 #include "utils/filesystem.hpp"
 #include "utils/optional_ref.hpp"
 
+template <typename T>
+concept SolLibContainer =
+	std::ranges::range<T> &&
+	std::same_as<std::ranges::range_value_t<T>, sol::lib>; 
 
 class LuaState
 {
@@ -36,7 +40,12 @@ class LuaRuntime
 public:
 	enum class Presets {Base, Configs, Custom};
 
-	explicit LuaRuntime(LuaState &state, Presets preset = Presets::Base);
+	explicit LuaRuntime(LuaState &state, Presets preset = Presets::Base)
+		: lua(state),
+		  preset(preset)
+	{
+		reset(false);
+	}
 	LuaRuntime(const LuaRuntime&) = delete;
 	LuaRuntime(const LuaRuntime&&) = delete;
 	LuaRuntime& operator=(const LuaRuntime&) = delete;
@@ -48,6 +57,9 @@ public:
 	auto operator[](Key&& key) noexcept {
 		return sandbox[std::forward<Key>(key)];
 	}
+	
+	void reset(bool doCollectGrbg = false);
+
 	auto run(std::string_view script) { 
 		return lua.state.script(script, sandbox);
 	}
@@ -72,7 +84,7 @@ private:
 	using LibsSandboxingRulesMap = std::unordered_map<sol::lib, LibSymbolsRules>;
 
 	auto checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>;
-	void loadLibs(const LibsList &names);
+	void loadLibs(const SolLibContainer auto &libs);
 	bool loadLib(sol::lib lib);
 	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
 	
