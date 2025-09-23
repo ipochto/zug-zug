@@ -122,3 +122,31 @@ TEST_CASE("LuaRuntime sandbox keeps objects isolated from global lua") {
 	result = lua.state.script("return x * 2");
 	CHECK(result.get<int>() == 642);
 }
+
+TEST_CASE("LuaRuntime sandbox drops objects after reset()") {
+	LuaState lua;
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
+
+	sandbox["foo"] = "bar";
+	REQUIRE(sandbox["foo"].valid());
+
+	sandbox.reset();
+
+	CHECK_FALSE(sandbox["foo"].valid());
+}
+
+TEST_CASE("LuaRuntime sandbox reloads libraries after reset()") {
+	LuaState lua;
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+
+	CHECK(sandbox.require(sol::lib::base));
+	CHECK(sandbox.require(sol::lib::string));
+
+	sandbox.reset();
+
+	CHECK(sandbox["assert"].valid());
+	CHECK(sandbox["type"].valid());
+	
+	REQUIRE(sandbox["string"].valid());
+	CHECK(sandbox["string"]["upper"].valid());
+}
