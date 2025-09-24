@@ -18,9 +18,9 @@ class LuaState
 public:
 	LuaState() noexcept = default;
 	LuaState(const LuaState&) = delete;
-	LuaState(const LuaState&&) = delete;
+	LuaState(LuaState&&) = delete;
 	LuaState& operator=(const LuaState&) = delete;
-	LuaState& operator=(const LuaState&&) = delete;
+	LuaState& operator=(LuaState&&) = delete;
 
 	[[nodiscard]]
 	bool require(sol::lib lib);
@@ -47,9 +47,9 @@ public:
 		reset(false);
 	}
 	LuaRuntime(const LuaRuntime&) = delete;
-	LuaRuntime(const LuaRuntime&&) = delete;
+	LuaRuntime(LuaRuntime&&) = delete;
 	LuaRuntime& operator=(const LuaRuntime&) = delete;
-	LuaRuntime& operator=(const LuaRuntime&&) = delete;
+	LuaRuntime& operator=(LuaRuntime&&) = delete;
 
 	~LuaRuntime() = default;
 
