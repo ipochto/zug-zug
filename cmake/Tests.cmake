@@ -22,6 +22,7 @@ if(BUILD_TESTING)
         tests/main.cpp
         tests/dummy.cpp
         tests/zug-zug/test_luaSandboxes.cpp
+        tests/utils/test_filesystem.cpp
     )
     target_compile_features(tests PRIVATE cxx_std_20)
     target_link_libraries(tests PRIVATE
