@@ -1,7 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <filesystem>
-#include <string_view>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -10,13 +11,28 @@ namespace fs = std::filesystem;
 ----------------------------------------------------------------------------*/
 namespace fs_utils {
 
-	template<typename T>
-	concept Character = std::same_as<T, char> || std::same_as<T, wchar_t>;
-
-	template <Character CharT>
-	inline bool starts_with(std::basic_string_view<CharT> checkStr,
-                        	std::basic_string_view<CharT> prefix)
+	inline bool startsWith(const fs::path &base, const fs::path &path)
 	{
-		return checkStr.substr(0, prefix.size()) == prefix;
+		if (base.empty()) {
+			return false;
+		}
+		const auto baseNorm = fs::absolute(base).lexically_normal();
+		const auto pathNorm = fs::absolute(path).lexically_normal();
+
+		const auto [baseEnd, notused] = std::ranges::mismatch(baseNorm, pathNorm);
+		return baseEnd == baseNorm.end();
+	}
+
+	inline bool startsWithOneOf(const std::vector<fs::path> &bases, const fs::path &path)
+	{
+		if (bases.empty()) {
+			return false;
+		}
+		for (const auto &base: bases) {
+			if (startsWith(base, path)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
