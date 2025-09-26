@@ -1,7 +1,10 @@
 #pragma once
 
+#include <algorithm>
+#include <concepts>
 #include <filesystem>
-#include <string_view>
+#include <ranges>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -10,13 +13,32 @@ namespace fs = std::filesystem;
 ----------------------------------------------------------------------------*/
 namespace fs_utils {
 
-	template<typename T>
-	concept Character = std::same_as<T, char> || std::same_as<T, wchar_t>;
-
-	template <Character CharT>
-	inline bool starts_with(std::basic_string_view<CharT> checkStr,
-                        	std::basic_string_view<CharT> prefix)
+	[[nodiscard]]
+	inline bool startsWith(const fs::path &path, const fs::path &root)
 	{
-		return checkStr.substr(0, prefix.size()) == prefix;
+		if (root.empty()) {
+			return false;
+		}
+		const auto rootNorm = fs::absolute(root).lexically_normal();
+		const auto pathNorm = fs::absolute(path).lexically_normal();
+
+		const auto [rootEnd, _] = std::ranges::mismatch(rootNorm, pathNorm);
+		return rootEnd == rootNorm.end();
+	}
+
+	template <std::ranges::input_range Range>
+	requires std::same_as<std::ranges::range_value_t<Range>, fs::path>
+	[[nodiscard]]
+	inline bool startsWith(const fs::path &path, const Range &roots)
+	{
+		if (roots.empty()) {
+			return false;
+		}
+		for (const auto &root: roots) {
+			if (startsWith(path, root)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
