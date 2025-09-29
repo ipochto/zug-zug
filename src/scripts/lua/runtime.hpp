@@ -111,8 +111,8 @@ private:
 	auto dofile(sol::stack_object fileName) {
 		return runFile(toScriptPath(fileName.as<std::string>()));
 	}
-	void enableScriptFiles();
-	bool enablePrint();
+	void loadSafeExternalScriptFilesRoutine();
+	bool loadSafePrint();
 	void print(sol::variadic_args args);
 
 	LuaState &lua;
