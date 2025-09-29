@@ -153,14 +153,3 @@ TEST_CASE("LuaRuntime sandbox reloads libraries after reset()") {
 	REQUIRE(sandbox["string"].valid());
 	CHECK(sandbox["string"]["upper"].valid());
 }
-
-TEST_CASE("LuaRuntime enable safe print") {
-	LuaState lua;
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
-
-	REQUIRE_FALSE(sandbox["print"].valid());
-
-	REQUIRE(sandbox.enablePrint());
-
-	CHECK(sandbox["print"].valid());
-}

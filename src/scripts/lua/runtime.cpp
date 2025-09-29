@@ -60,6 +60,8 @@ void LuaRuntime::reset(bool doCollectGrbg /* = false */)
 	} else {
 		loadLibs(loadedLibs);
 	}
+	enablePrint();
+	enableScriptFiles();
 
 	if(doCollectGrbg) {
 		lua.state.collect_garbage();
@@ -73,6 +75,12 @@ bool LuaRuntime::require (sol::lib lib)
 	}
 	return false;
 };
+
+void LuaRuntime::enableScriptFiles()
+{
+	sandbox.set_function("dofile", &LuaRuntime::dofile, this);
+	sandbox["require"] = sandbox["dofile"];
+}
 
 bool LuaRuntime::enablePrint()
 {
@@ -144,6 +152,16 @@ void LuaRuntime::addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules)
 	for (const auto &name : rules.restricted) {
 		dst[name] = sol::nil;
 	}
+}
+
+auto LuaRuntime::toScriptPath(const std::string &fileName) const
+	-> fs::path
+{
+	auto scriptPath {fs::path(fileName)};
+	if (scriptPath.is_relative()) {
+		scriptPath = scriptsRoot / scriptPath;
+	}
+	return scriptPath.lexically_normal();
 }
 
 void LuaRuntime::print(sol::variadic_args args)

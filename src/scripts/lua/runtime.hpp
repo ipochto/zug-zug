@@ -40,10 +40,13 @@ class LuaRuntime
 public:
 	enum class Presets {Base, Configs, Custom};
 
-	explicit LuaRuntime(LuaState &state, Presets preset = Presets::Base)
+	explicit LuaRuntime(LuaState &state,
+						Presets preset = Presets::Base,
+						fs::path root = {})
 		: lua(state),
 		  preset(preset)
 	{
+		setRootForScripts(root.empty() ? fs::current_path() : root);
 		reset(false);
 	}
 	LuaRuntime(const LuaRuntime&) = delete;
@@ -64,13 +67,17 @@ public:
 		return lua.state.script(script, sandbox);
 	}
 	auto runFile(const fs::path &scriptFile) { 
-		return lua.state.script_file(scriptFile.string(), sandbox);
+		return isPathAllowed(scriptFile) 
+			   ? lua.state.script_file(scriptFile.string(), sandbox)
+			   : run("return nil");
 	}
 	
 	[[nodiscard]]
 	bool require(sol::lib lib);
 
-	bool enablePrint();
+	void setRootForScripts(const fs::path &root) {
+		scriptsRoot = fs::absolute(root).lexically_normal();
+	}
 
 private:
 	using NamesList = std::vector<std::string_view>;
@@ -90,15 +97,27 @@ private:
 	bool loadLib(sol::lib lib);
 	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
 
-	//	loadfile(sol::stack_object file); -> sandbox["loadfile"]
-	//	dofile(sol::stack_object file); -> sandbox["dofile"]
-	//	require -> sandbox["require"]
+	[[nodiscard]]
+	auto toScriptPath(const std::string &fileName) const -> fs::path;
+
+	[[nodiscard]]
+	bool isPathAllowed(const fs::path &scriptFile) const {
+		return fs_utils::startsWith(scriptFile, scriptsRoot);
+	}
+	auto dofile(sol::stack_object fileName) {
+		return runFile(toScriptPath(fileName.as<std::string>()));
+	}
+	void enableScriptFiles();
+	bool enablePrint();
 	void print(sol::variadic_args args);
 
 	LuaState &lua;
 	sol::environment sandbox;
+
+	Presets preset {Presets::Base};
+	fs::path scriptsRoot; // absolute and lexically normalized
+
 	std::set<sol::lib> loadedLibs;
-	Presets preset;
 
 	static const SandboxPresetsMap sandboxPresets;
 	static const LibsSandboxingRulesMap libsSandboxingRules;
