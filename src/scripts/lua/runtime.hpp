@@ -11,7 +11,7 @@
 template <typename T>
 concept SolLibContainer =
 	std::ranges::range<T> &&
-	std::same_as<std::ranges::range_value_t<T>, sol::lib>; 
+	std::same_as<std::remove_cvref_t<std::ranges::range_value_t<T>>, sol::lib>;
 
 class LuaState
 {
@@ -56,11 +56,9 @@ public:
 
 	~LuaRuntime() = default;
 
-	template <typename Key>
-	auto operator[](Key&& key) noexcept {
-		return sandbox[std::forward<Key>(key)];
+	auto operator[](auto &&key) noexcept {
+		return sandbox[std::forward<decltype(key)>(key)];
 	}
-	
 	void reset(bool doCollectGrbg = false);
 
 	auto run(std::string_view script) { 
@@ -93,8 +91,14 @@ private:
 	using LibsSandboxingRulesMap = std::unordered_map<sol::lib, LibSymbolsRules>;
 
 	auto checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>;
-	void loadLibs(const SolLibContainer auto &libs);
+
 	bool loadLib(sol::lib lib);
+
+	void loadLibs(const SolLibContainer auto &libs) {
+		for (const auto lib : libs) {
+			loadLib(lib);
+		}
+	}
 	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
 
 	[[nodiscard]]
@@ -183,5 +187,5 @@ namespace lua
 	auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>;
 
 	[[nodiscard]]
-	std::string toString(sol::object obj);
+	auto toString(sol::object obj)-> std::string;
 }
