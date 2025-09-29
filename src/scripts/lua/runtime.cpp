@@ -25,7 +25,8 @@ namespace lua
 		return std::nullopt;
 	}
 
-	std::string toString(sol::object obj)
+	auto toString(sol::object obj)
+		-> std::string
 	{
 		sol::state_view lua(obj.lua_state());
 		if (!lua["tostring"].valid()) {
@@ -89,13 +90,6 @@ bool LuaRuntime::enablePrint()
 	}
 	sandbox.set_function("print", &LuaRuntime::print, this);
 	return true;
-};
-
-void LuaRuntime::loadLibs(const SolLibContainer auto &libs)
-{
-	for (const auto lib : libs) {
-		loadLib(lib);
-	}
 }
 
 auto LuaRuntime::checkRulesFor(sol::lib lib) const noexcept
