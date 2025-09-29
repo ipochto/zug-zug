@@ -61,8 +61,8 @@ void LuaRuntime::reset(bool doCollectGrbg /* = false */)
 	} else {
 		loadLibs(loadedLibs);
 	}
-	enablePrint();
-	enableScriptFiles();
+	loadSafePrint();
+	loadSafeExternalScriptFilesRoutine();
 
 	if(doCollectGrbg) {
 		lua.state.collect_garbage();
@@ -77,13 +77,13 @@ bool LuaRuntime::require (sol::lib lib)
 	return false;
 };
 
-void LuaRuntime::enableScriptFiles()
+void LuaRuntime::loadSafeExternalScriptFilesRoutine()
 {
 	sandbox.set_function("dofile", &LuaRuntime::dofile, this);
 	sandbox["require"] = sandbox["dofile"];
 }
 
-bool LuaRuntime::enablePrint()
+bool LuaRuntime::loadSafePrint()
 {
 	if (!lua.require(sol::lib::base)) {
 		return false;
