@@ -23,13 +23,13 @@ TEST_CASE("LuaState require does not loads libraries into LuaRuntime") {
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
-	REQUIRE_FALSE(lua.state["assert"].valid());
-	REQUIRE_FALSE(sandbox["assert"].valid());
+	REQUIRE_FALSE(lua.state["string"].valid());
+	REQUIRE_FALSE(sandbox["string"].valid());
 
-	REQUIRE(lua.require(sol::lib::base));
+	REQUIRE(lua.require(sol::lib::string));
 
-	CHECK(lua.state["assert"].valid());
-	CHECK_FALSE(sandbox["assert"].valid());
+	CHECK(lua.state["string"].valid());
+	CHECK_FALSE(sandbox["string"].valid());
 }
 
 TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries manually") {
