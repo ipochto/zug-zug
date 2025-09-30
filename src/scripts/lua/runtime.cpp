@@ -1,5 +1,7 @@
-#include "lua/runtime.hpp"
 #include <fmt/core.h>
+#include <spdlog/spdlog.h>
+
+#include "lua/runtime.hpp"
 
 namespace lua
 {
@@ -67,6 +69,27 @@ void LuaRuntime::reset(bool doCollectGrbg /* = false */)
 	if(doCollectGrbg) {
 		lua.state.collect_garbage();
 	}
+}
+
+auto LuaRuntime::run(std::string_view script)
+	-> sol::protected_function_result
+{
+	return lua.state.script(script, sandbox);
+}
+
+auto LuaRuntime::runFile(const fs::path &scriptFile)
+	-> sol::protected_function_result
+{
+	if (!fs::exists(scriptFile)) {
+		spdlog::error("Attempting to run a non-existent script: {}", scriptFile.string());
+		return run("return nil");
+	}
+	if (!isPathAllowed(scriptFile)) {
+		spdlog::error("Attempting to run a script outside the allowed path: {}", 
+					  scriptFile.string());
+		return run("return nil");
+	}
+	return lua.state.script_file(scriptFile.string(), sandbox);
 }
 
 bool LuaRuntime::require (sol::lib lib)
