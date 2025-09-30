@@ -1,5 +1,5 @@
 #include <doctest/doctest.h>
-#include <sol/forward.hpp>
+#include <string>
 #include "scripts/lua/runtime.hpp"
 
 TEST_CASE("LuaState require loads libraries") {

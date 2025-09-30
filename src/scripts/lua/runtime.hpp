@@ -61,14 +61,8 @@ public:
 	}
 	void reset(bool doCollectGrbg = false);
 
-	auto run(std::string_view script) { 
-		return lua.state.script(script, sandbox);
-	}
-	auto runFile(const fs::path &scriptFile) { 
-		return isPathAllowed(scriptFile) 
-			   ? lua.state.script_file(scriptFile.string(), sandbox)
-			   : run("return nil");
-	}
+	auto run(std::string_view script)-> sol::protected_function_result;
+	auto runFile(const fs::path &scriptFile)-> sol::protected_function_result;
 	
 	[[nodiscard]]
 	bool require(sol::lib lib);
