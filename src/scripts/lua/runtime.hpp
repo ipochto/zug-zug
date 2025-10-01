@@ -182,4 +182,7 @@ namespace lua
 
 	[[nodiscard]]
 	auto toString(sol::object obj)-> std::string;
+
+	[[nodiscard]]
+	bool isBytecode(const fs::path &file);
 }

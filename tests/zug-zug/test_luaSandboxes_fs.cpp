@@ -45,6 +45,16 @@ bool createScriptFile(const fs::path &fileName, const auto &script)
 	return false;
 }
 
+bool createBytecodeFile(const fs::path &fileName)
+{
+	if (std::ofstream ofs(fileName, std::ios::binary); ofs) {
+		ofs.write(LUA_SIGNATURE, 4);
+		ofs << "some garbage data...";
+		return true;
+	}
+	return false;
+}
+
 namespace files
 {
 	const auto module = R"(
@@ -99,6 +109,14 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		CHECK(result.get<sol::object>() == sol::nil);
 	}
 
+	SUBCASE("Trying to load precompiled bytecode.") {
+		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
+		
+		REQUIRE(createBytecodeFile(wrkDir / "bytecode.lua"));
+
+		auto result = sandbox.runFile(fs::path(wrkDir / "bytecode.lua"));
+		CHECK(result.get<sol::object>() == sol::nil);
+	}
 }
 
 TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.") {
