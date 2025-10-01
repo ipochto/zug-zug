@@ -1,4 +1,5 @@
 #include <doctest/doctest.h>
+#include <vector>
 #include "utils/filesystem.hpp"
 
 TEST_CASE("fs_utils: startsWith absolute base") {
