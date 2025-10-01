@@ -1,4 +1,6 @@
 #include <fmt/core.h>
+#include <fstream>
+#include <ranges>
 #include <spdlog/spdlog.h>
 
 #include "lua/runtime.hpp"
@@ -36,6 +38,22 @@ namespace lua
 			return {};
 		}
 		return lua["tostring"](obj).get<std::string>();
+	}
+
+	bool isBytecode(const fs::path &file)
+	{
+		constexpr auto signature = std::string_view(LUA_SIGNATURE);
+
+		auto ifs = std::ifstream(file, std::ios::binary);
+		if (!ifs) {
+			return false; 
+		}
+		std::array<char, signature.size()> header{};
+		ifs.read(header.data(), header.size());
+		if (ifs.gcount() < static_cast<std::streamsize>(header.size())) {
+			return false; 
+		}
+		return std::ranges::equal(header, signature);
 	}
 }
 
@@ -86,6 +104,11 @@ auto LuaRuntime::runFile(const fs::path &scriptFile)
 	}
 	if (!isPathAllowed(scriptFile)) {
 		spdlog::error("Attempting to run a script outside the allowed path: {}", 
+					  scriptFile.string());
+		return run("return nil");
+	}
+	if (lua::isBytecode(scriptFile)) {
+		spdlog::error("Attempting to run precompiled Lua bytecode: {}", 
 					  scriptFile.string());
 		return run("return nil");
 	}
