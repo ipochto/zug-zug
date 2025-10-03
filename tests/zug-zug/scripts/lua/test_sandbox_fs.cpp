@@ -85,6 +85,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "allowed.lua"));
+		REQUIRE(result.valid());
+		CHECK(result.get<std::string>() == "foo");
 		CHECK(sandbox["bar"] == 42);
 	}
 
@@ -92,6 +94,9 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "../scripts/./allowed.lua"));
+
+		REQUIRE(result.valid());
+		CHECK(result.get<std::string>() == "foo");
 		CHECK(sandbox["bar"] == 42);
 	}
 
@@ -99,14 +104,14 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "non-existent.lua"));
-		CHECK(result.get<sol::object>() == sol::nil);
+		CHECK_FALSE(result.valid());
 	}
 	
 	SUBCASE("File exists, path is forbidden.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "../forbidden.lua"));
-		CHECK(result.get<sol::object>() == sol::nil);
+		CHECK_FALSE(result.valid());
 	}
 
 	SUBCASE("Trying to load precompiled bytecode.") {
@@ -115,7 +120,7 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		REQUIRE(createBytecodeFile(wrkDir / "bytecode.lua"));
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "bytecode.lua"));
-		CHECK(result.get<sol::object>() == sol::nil);
+		CHECK_FALSE(result.valid());
 	}
 }
 
@@ -135,7 +140,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 
 		sandbox.run(R"(result = dofile("script.lua"))");
-		REQUIRE_FALSE(sandbox["result"] == sol::nil);
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"] == std::string("foo"));
 		CHECK(sandbox["bar"] == 42);
 	}
 
@@ -143,7 +149,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 
 		sandbox.run(R"(result = dofile("../scripts/./script.lua"))");
-		REQUIRE_FALSE(sandbox["result"] == sol::nil);		
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"] == std::string("foo"));
 		CHECK(sandbox["bar"] == 42);
 	}
 

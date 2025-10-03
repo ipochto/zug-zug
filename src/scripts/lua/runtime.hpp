@@ -102,9 +102,7 @@ private:
 	bool isPathAllowed(const fs::path &scriptFile) const {
 		return fs_utils::startsWith(scriptFile, scriptsRoot);
 	}
-	auto dofile(sol::stack_object fileName) {
-		return runFile(toScriptPath(fileName.as<std::string>()));
-	}
+	auto dofile(sol::stack_object fileName)-> sol::protected_function_result;
 	void loadSafeExternalScriptFilesRoutine();
 	bool loadSafePrint();
 	void print(sol::variadic_args args);
@@ -185,4 +183,10 @@ namespace lua
 
 	[[nodiscard]]
 	bool isBytecode(const fs::path &file);
+
+	[[nodiscard]]
+	auto makeFnCallResult(sol::state &lua,
+						  const auto &object,
+						  sol::call_status callStatus = sol::call_status::ok)
+		-> sol::protected_function_result;
 }
