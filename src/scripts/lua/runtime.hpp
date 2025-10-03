@@ -46,7 +46,7 @@ public:
 		: lua(state),
 		  preset(preset)
 	{
-		setRootForScripts(root.empty() ? fs::current_path() : root);
+		setRootForScripts(root);
 		reset(false);
 	}
 	LuaRuntime(const LuaRuntime&) = delete;
@@ -68,7 +68,7 @@ public:
 	bool require(sol::lib lib);
 
 	void setRootForScripts(const fs::path &root) {
-		scriptsRoot = fs::absolute(root).lexically_normal();
+		scriptsRoot = root.empty() ? root : fs::absolute(root).lexically_normal();
 	}
 
 private:
@@ -111,7 +111,8 @@ private:
 	sol::environment sandbox;
 
 	Presets preset {Presets::Base};
-	fs::path scriptsRoot; // absolute and lexically normalized
+	fs::path scriptsRoot {}; // Absolute and lexically normalized.
+							 // External scripts prohibited if empty.
 
 	std::set<sol::lib> loadedLibs;
 
