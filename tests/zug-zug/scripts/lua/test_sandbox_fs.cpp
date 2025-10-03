@@ -114,6 +114,13 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		CHECK_FALSE(result.valid());
 	}
 
+	SUBCASE("File exists, but sandbox has no allowed path.") {
+		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+
+		auto result = sandbox.runFile(fs::path(wrkDir / "allowed.lua"));
+		CHECK_FALSE(result.valid());
+	}
+
 	SUBCASE("Trying to load precompiled bytecode.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 		
