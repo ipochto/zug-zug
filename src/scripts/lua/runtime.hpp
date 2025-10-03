@@ -31,6 +31,7 @@ private:
 	bool isLibraryLoaded(sol::lib lib) const noexcept { return loadedLibs.contains(lib); }
 	void loadLibrary(sol::lib lib);
 
+private:
 	std::set<sol::lib> loadedLibs;
 };
 
@@ -63,7 +64,7 @@ public:
 
 	auto run(std::string_view script)-> sol::protected_function_result;
 	auto runFile(const fs::path &scriptFile)-> sol::protected_function_result;
-	
+
 	[[nodiscard]]
 	bool require(sol::lib lib);
 
@@ -72,14 +73,14 @@ public:
 	}
 
 private:
-	using NamesList = std::vector<std::string_view>;
-	using LibsList = std::vector<sol::lib>;
-	using SandboxPresetsMap = std::unordered_map<Presets, LibsList>;
+	using LibNames = std::vector<std::string_view>;
+	using Libs = std::vector<sol::lib>;
+	using SandboxPresets = std::unordered_map<Presets, Libs>;
 
 	struct LibSymbolsRules {
 		bool allowedAllExceptRestricted {false};
-		NamesList allowed {}; // This will be ignored if allowedAllExceptRestricted is set
-		NamesList restricted {};
+		LibNames allowed {}; // This will be ignored if allowedAllExceptRestricted is set
+		LibNames restricted {};
 	};
 
 	using LibsSandboxingRulesMap = std::unordered_map<sol::lib, LibSymbolsRules>;
@@ -107,20 +108,21 @@ private:
 	bool loadSafePrint();
 	void print(sol::variadic_args args);
 
+private:
 	LuaState &lua;
 	sol::environment sandbox;
 
 	Presets preset {Presets::Base};
-	fs::path scriptsRoot {}; // Absolute and lexically normalized.
-							 // External scripts prohibited if empty.
+	fs::path scriptsRoot {};	// Absolute, lexically normalized path.
+								// If empty, loading external scripts is prohibited.
 
 	std::set<sol::lib> loadedLibs;
 
-	static const SandboxPresetsMap sandboxPresets;
+	static const SandboxPresets sandboxPresets;
 	static const LibsSandboxingRulesMap libsSandboxingRules;
 };
 
-inline const LuaRuntime::SandboxPresetsMap
+inline const LuaRuntime::SandboxPresets
 LuaRuntime::sandboxPresets {
 	{Presets::Base, {
 		sol::lib::base,
@@ -129,7 +131,7 @@ LuaRuntime::sandboxPresets {
 		sol::lib::base,
 		sol::lib::table,
 		sol::lib::string}},
-	{Presets::Custom, {}}		
+	{Presets::Custom, {}}
 };
 
 inline const LuaRuntime::LibsSandboxingRulesMap
@@ -157,7 +159,7 @@ namespace lua
 	{
 		using LibsLookupTable = std::unordered_map<sol::lib, std::string_view>;
 
-		inline const LibsLookupTable libsLookupTable = {
+		inline const auto libsLookupTable = LibsLookupTable {
 			{sol::lib::base,		"base"},
 			{sol::lib::bit32,		"bit32"}, // Lua 5.2+
 			{sol::lib::coroutine,	"coroutine"},

@@ -34,7 +34,6 @@ namespace lua
 	{
 		sol::state_view lua(obj.lua_state());
 		if (!lua["tostring"].valid()) {
-			// log error
 			return {};
 		}
 		return lua["tostring"](obj).get<std::string>();
@@ -46,12 +45,12 @@ namespace lua
 
 		auto ifs = std::ifstream(file, std::ios::binary);
 		if (!ifs) {
-			return false; 
+			return false;
 		}
-		std::array<char, signature.size()> header{};
+		auto header = std::array<char, signature.size()> {};
 		ifs.read(header.data(), header.size());
 		if (ifs.gcount() < static_cast<std::streamsize>(header.size())) {
-			return false; 
+			return false;
 		}
 		return std::ranges::equal(header, signature);
 	}
@@ -72,7 +71,7 @@ namespace lua
 }
 
 bool LuaState::require(sol::lib lib)
-{ 
+{
 	if (not isLibraryLoaded(lib)) {
 		loadLibrary(lib);
 	}
@@ -80,7 +79,7 @@ bool LuaState::require(sol::lib lib)
 }
 
 void LuaState::loadLibrary(sol::lib lib)
-{ 
+{
 	state.open_libraries(lib);
 	loadedLibs.insert(lib);
 }
@@ -133,7 +132,7 @@ auto LuaRuntime::runFile(const fs::path &scriptFile)
 }
 
 bool LuaRuntime::require (sol::lib lib)
-{ 
+{
 	if (preset == Presets::Custom) {
 		return loadLib(lib);
 	}
@@ -173,7 +172,7 @@ bool LuaRuntime::loadSafePrint()
 }
 
 auto LuaRuntime::checkRulesFor(sol::lib lib) const noexcept
-	-> opt_cref<LibSymbolsRules> 
+	-> opt_cref<LibSymbolsRules>
 {
 	const auto it = libsSandboxingRules.find(lib);
 	if (it == libsSandboxingRules.end()) {
@@ -203,7 +202,7 @@ void LuaRuntime::addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules)
 		return;
 	}
 	const auto libLookupName = (lib == sol::lib::base) ? "_G" : *libName;
-	
+
 	const sol::table src = lua.state[libLookupName];
 	if (!src.valid()) {
 		return;
@@ -211,10 +210,10 @@ void LuaRuntime::addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules)
 	if (libLookupName != "_G") {
 		sandbox[libLookupName] = sol::table(lua.state, sol::create);
 	}
-	
+
 	sol::table dst = sandbox[libLookupName];
 
-	if (rules.allowedAllExceptRestricted) { 
+	if (rules.allowedAllExceptRestricted) {
 		for (const auto &[name, object]: src) {
 			dst[name] = object;
 		}
