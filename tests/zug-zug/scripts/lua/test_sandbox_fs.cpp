@@ -106,7 +106,7 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		auto result = sandbox.runFile(fs::path(wrkDir / "non-existent.lua"));
 		CHECK_FALSE(result.valid());
 	}
-	
+
 	SUBCASE("File exists, path is forbidden.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 
@@ -123,7 +123,7 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 
 	SUBCASE("Trying to load precompiled bytecode.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
-		
+
 		REQUIRE(createBytecodeFile(wrkDir / "bytecode.lua"));
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "bytecode.lua"));
@@ -167,13 +167,13 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.") {
 		sandbox.run(R"(result = dofile("non-existent.lua"))");
 		CHECK(sandbox["result"] == sol::nil);
 	}
-	
+
 	SUBCASE("File exists, path is forbidden.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
 
 		sandbox.run(R"(result = dofile("../forbidden.lua"))");
 		CHECK(sandbox["result"] == sol::nil);
-	}	
+	}
 
 	SUBCASE("Load existed script file as a module.") {
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir);
