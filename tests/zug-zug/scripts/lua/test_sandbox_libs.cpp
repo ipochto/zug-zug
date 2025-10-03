@@ -149,7 +149,7 @@ TEST_CASE("LuaRuntime sandbox reloads libraries after reset()") {
 
 	CHECK(sandbox["assert"].valid());
 	CHECK(sandbox["type"].valid());
-	
+
 	REQUIRE(sandbox["string"].valid());
 	CHECK(sandbox["string"]["upper"].valid());
 }
