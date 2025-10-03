@@ -55,6 +55,20 @@ namespace lua
 		}
 		return std::ranges::equal(header, signature);
 	}
+
+	auto makeFnCallResult(sol::state &lua,
+						  const auto &object,
+						  sol::call_status callStatus /* = sol::call_status::ok */)
+		-> sol::protected_function_result
+	{
+		bool isResultValid = callStatus == sol::call_status::ok;
+		sol::stack::push(lua, object);
+		return sol::protected_function_result(lua,
+											  -1,
+											  isResultValid ? 1 : 0,
+											  1,
+											  callStatus);
+	}
 }
 
 bool LuaState::require(sol::lib lib)
@@ -98,19 +112,22 @@ auto LuaRuntime::run(std::string_view script)
 auto LuaRuntime::runFile(const fs::path &scriptFile)
 	-> sol::protected_function_result
 {
+	auto error = [this, &scriptFile] (std::string_view msg) {
+		const auto errMsg = fmt::format("{}: {}", msg, scriptFile.string());
+		spdlog::error("{}", errMsg);
+		return lua::makeFnCallResult(lua.state,
+									 errMsg,
+									 sol::call_status::file);
+	};
+
 	if (!fs::exists(scriptFile)) {
-		spdlog::error("Attempting to run a non-existent script: {}", scriptFile.string());
-		return run("return nil");
+		return error("Attempting to run a non-existent script");
 	}
 	if (!isPathAllowed(scriptFile)) {
-		spdlog::error("Attempting to run a script outside the allowed path: {}", 
-					  scriptFile.string());
-		return run("return nil");
+		return error("Attempting to run a script outside the allowed path");
 	}
 	if (lua::isBytecode(scriptFile)) {
-		spdlog::error("Attempting to run precompiled Lua bytecode: {}", 
-					  scriptFile.string());
-		return run("return nil");
+		return error("Attempting to run precompiled Lua bytecode");
 	}
 	return lua.state.script_file(scriptFile.string(), sandbox);
 }
@@ -121,7 +138,24 @@ bool LuaRuntime::require (sol::lib lib)
 		return loadLib(lib);
 	}
 	return false;
-};
+}
+
+auto LuaRuntime::dofile(sol::stack_object fileName)
+	-> sol::protected_function_result
+{
+	auto nil = [this] () {
+		return lua::makeFnCallResult(lua.state, sol::nil);
+	};
+
+	if (!fileName.is<std::string>()) {
+		return nil();
+	}
+	const auto filePath = toScriptPath(fileName.as<std::string>());
+	if (auto result = runFile(filePath); result.valid()) {
+		return result;
+	}
+	return nil();
+}
 
 void LuaRuntime::loadSafeExternalScriptFilesRoutine()
 {
