@@ -21,6 +21,9 @@ if(BUILD_TESTING)
     add_executable(tests 
         tests/main.cpp
         tests/dummy.cpp
+        tests/zug-zug/scripts/lua/test_sandbox_libs.cpp
+        tests/zug-zug/scripts/lua/test_sandbox_fs.cpp
+        tests/utils/test_filesystem.cpp
     )
     target_compile_features(tests PRIVATE cxx_std_20)
     target_link_libraries(tests PRIVATE
