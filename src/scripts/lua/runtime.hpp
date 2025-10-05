@@ -40,16 +40,19 @@ class LuaRuntime
 {
 public:
 	enum class Presets {Base, Configs, Custom};
+	using Paths = std::vector<fs::path>;
 
 	explicit LuaRuntime(LuaState &state,
-						Presets preset = Presets::Base,
-						fs::path root = {})
+						Presets preset,
+						const fs::path &root = {},
+						const Paths &allowedPaths = {})
 		: lua(state),
 		  preset(preset)
 	{
-		setRootForScripts(root);
+		setPathsForScripts(root, allowedPaths);
 		reset(false);
 	}
+
 	LuaRuntime(const LuaRuntime&) = delete;
 	LuaRuntime(LuaRuntime&&) = delete;
 	LuaRuntime& operator=(const LuaRuntime&) = delete;
@@ -67,11 +70,8 @@ public:
 
 	[[nodiscard]]
 	bool require(sol::lib lib);
-
-	void setRootForScripts(const fs::path &root) {
-		scriptsRoot = root.empty() ? root : fs::absolute(root).lexically_normal();
-	}
-
+	void allowScriptPath(const fs::path &path);
+	
 private:
 	using LibNames = std::vector<std::string_view>;
 	using Libs = std::vector<sol::lib>;
@@ -96,12 +96,14 @@ private:
 	}
 	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
 
+	void setPathsForScripts(const fs::path &root, const Paths &allowed);
+
 	[[nodiscard]]
 	auto toScriptPath(const std::string &fileName) const -> fs::path;
 
 	[[nodiscard]]
 	bool isPathAllowed(const fs::path &scriptFile) const {
-		return fs_utils::startsWith(scriptFile, scriptsRoot);
+		return fs_utils::startsWith(scriptFile, allowedScriptPaths);
 	}
 	auto dofile(sol::stack_object fileName)-> sol::protected_function_result;
 	void loadSafeExternalScriptFilesRoutine();
@@ -114,7 +116,9 @@ private:
 
 	Presets preset {Presets::Base};
 	fs::path scriptsRoot {};	// Absolute, lexically normalized path.
+								// Relative paths to script files are resolved from this location.
 								// If empty, loading external scripts is prohibited.
+	Paths allowedScriptPaths {};
 
 	std::set<sol::lib> loadedLibs;
 
