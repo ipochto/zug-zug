@@ -227,6 +227,30 @@ void LuaRuntime::addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules)
 	}
 }
 
+void LuaRuntime::allowScriptPath(const fs::path &path)
+{
+	if(scriptsRoot.empty() || path.empty()) {
+		return;
+	}
+	const auto allow = path.is_relative() ? scriptsRoot / path : path;
+	allowedScriptPaths.push_back(fs_utils::normalize(allow));
+}
+
+void LuaRuntime::setPathsForScripts(const fs::path &root, const Paths &allowed)
+{
+	if (root.empty() || root.is_relative()) {
+		scriptsRoot.clear();
+		allowedScriptPaths.clear();
+		return;
+	}
+	scriptsRoot = fs_utils::normalize(root);
+	
+	allowedScriptPaths.clear();
+	for (const auto &path: allowed) {
+		allowScriptPath(path);
+	}
+}
+
 auto LuaRuntime::toScriptPath(const std::string &fileName) const
 	-> fs::path
 {
