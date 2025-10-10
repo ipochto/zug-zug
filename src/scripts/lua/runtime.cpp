@@ -157,7 +157,7 @@ void LuaRuntime::reset(bool doCollectGrbg /* = false */)
 auto LuaRuntime::run(std::string_view script)
 	-> sol::protected_function_result
 {
-	return lua.state.script(script, sandbox);
+	return lua.state.safe_script(script, sandbox);
 }
 
 auto LuaRuntime::runFile(const fs::path &scriptFile)
@@ -180,7 +180,7 @@ auto LuaRuntime::runFile(const fs::path &scriptFile)
 	if (lua::isBytecode(scriptFile)) {
 		return error("Attempting to run precompiled Lua bytecode");
 	}
-	return lua.state.script_file(scriptFile.string(), sandbox);
+	return lua.state.safe_script_file(scriptFile.string(), sandbox);
 }
 
 bool LuaRuntime::require (sol::lib lib)
