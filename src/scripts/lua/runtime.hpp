@@ -126,59 +126,8 @@ private:
 	static const LibsSandboxingRulesMap libsSandboxingRules;
 };
 
-inline const LuaRuntime::SandboxPresets
-LuaRuntime::sandboxPresets {
-	{Presets::Base, {
-		sol::lib::base,
-		sol::lib::table}},
-	{Presets::Configs, {
-		sol::lib::base,
-		sol::lib::table,
-		sol::lib::string}},
-	{Presets::Custom, {}}
-};
-
-inline const LuaRuntime::LibsSandboxingRulesMap
-LuaRuntime::libsSandboxingRules {
-	{sol::lib::base, {
-		.allowed = {"assert", "error", "ipairs", "next", "pairs", "pcall", "select",
-					"tonumber", "tostring", "type", "unpack", "_VERSION", "xpcall", "print"}}},
-	{sol::lib::coroutine, {
-		.allowedAllExceptRestricted = true}},
-	{sol::lib::math, {
-		.allowedAllExceptRestricted = true,
-		.restricted = {"random", "randomseed"}}},
-	{sol::lib::os, {
-		.allowed = {"clock", "date", "difftime", "time"}}},
-	{sol::lib::string, {
-		.allowedAllExceptRestricted = true,
-		.restricted = {"dump"}}},
-	{sol::lib::table, {
-		.allowedAllExceptRestricted = true}}
-};
-
 namespace lua
 {
-	namespace details
-	{
-		using LibsLookupTable = std::unordered_map<sol::lib, std::string_view>;
-
-		inline const auto libsLookupTable = LibsLookupTable {
-			{sol::lib::base,		"base"},
-			{sol::lib::bit32,		"bit32"}, // Lua 5.2+
-			{sol::lib::coroutine,	"coroutine"},
-			{sol::lib::debug,		"debug"},
-			{sol::lib::ffi,			"ffi"}, // LuaJIT only
-			{sol::lib::io,			"io"},
-			{sol::lib::jit,			"jit"}, // LuaJIT only
-			{sol::lib::math,		"math"},
-			{sol::lib::os,			"os"},
-			{sol::lib::package,		"package"},
-			{sol::lib::string,		"string"},
-			{sol::lib::table,		"table"},
-			{sol::lib::utf8,		"utf8"} // Lua 5.3+
-		};
-	}
 	[[nodiscard]]
 	auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>;
 
