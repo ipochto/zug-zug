@@ -21,7 +21,7 @@ const LuaRuntime::LibsSandboxingRulesMap
 LuaRuntime::libsSandboxingRules {
 	{sol::lib::base, {
 		.allowed = {"assert", "error", "ipairs", "next", "pairs", "pcall", "select",
-					"tonumber", "tostring", "type", "unpack", "_VERSION", "xpcall", "print"}}},
+					"tonumber", "tostring", "type", "unpack", "_VERSION", "xpcall"}}},
 	{sol::lib::coroutine, {
 		.allowedAllExceptRestricted = true}},
 	{sol::lib::math, {
