@@ -8,25 +8,25 @@
 namespace fs = std::filesystem;
 
 template <typename T>
-concept fsPaths =
+concept fsPaths = 
 	std::ranges::range<T>
 	&& std::same_as<std::remove_cvref_t<std::ranges::range_value_t<T>>, fs::path>;
 
 /*----------------------------------------------------------------------------
 --  Utils
 ----------------------------------------------------------------------------*/
-namespace fs_utils {
+namespace fs_utils
+{
 
 	[[nodiscard]]
-	inline auto normalize(const fs::path &path)
-		-> fs::path
+	inline auto normalize(const fs::path &path) -> fs::path
 	{
 		auto result = path.lexically_normal();
 		if (result.native().ends_with(fs::path::preferred_separator)) {
 			return result.parent_path();
 		}
 		return result;
-	}	
+	}
 
 	[[nodiscard]]
 	inline bool startsWith(const fs::path &path, const fs::path &root)
@@ -46,11 +46,11 @@ namespace fs_utils {
 		if (roots.empty()) {
 			return false;
 		}
-		for (const auto &root: roots) {
+		for (const auto &root : roots) {
 			if (startsWith(path, root)) {
 				return true;
 			}
 		}
 		return false;
 	}
-}
+} // namespace fs_utils

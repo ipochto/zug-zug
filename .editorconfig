@@ -11,7 +11,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 # The settings are the same in .clang-format. Keep them in sync.
-[*.{c,cpp,h,nsi,rc,pkg}]
+[*.{c,cpp,h,hpp,nsi,rc,pkg}]
 indent_style = tab
 indent_size = 4
 
