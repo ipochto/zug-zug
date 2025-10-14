@@ -1,12 +1,13 @@
-#include <doctest/doctest.h>
 #include "scripts/lua/runtime.hpp"
 
+#include <doctest/doctest.h>
 #include <filesystem>
 #include <fstream>
 #include <random>
 #include <string>
 
-struct TempDir {
+struct TempDir
+{
 	fs::path path;
 	TempDir()
 	{
@@ -18,12 +19,10 @@ struct TempDir {
 	}
 	~TempDir() { fs::remove_all(path); }
 
-	void clear()
-	{
-		fs::remove_all(path);
-	}
+	void clear() { fs::remove_all(path); }
 
-	std::string randomString(size_t length) {
+	std::string randomString(size_t length)
+	{
 		const auto chars = "0123456789abcdef";
 		auto rndDevice = std::random_device();
 		auto generator = std::mt19937(rndDevice());
@@ -68,10 +67,10 @@ namespace files
 		bar = 42
 		return foo
 	)";
-}
+} // namespace files
 
-TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
-
+TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.")
+{
 	LuaState lua;
 
 	const auto tmpDir = TempDir();
@@ -81,7 +80,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 	REQUIRE(createScriptFile(wrkDir / "allowed.lua", files::script));
 	REQUIRE(createScriptFile(wrkDir / "../forbidden.lua", files::script));
 
-	SUBCASE("File exists, path is allowed.") {
+	SUBCASE("File exists, path is allowed.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "allowed.lua"));
@@ -90,7 +90,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		CHECK(sandbox["bar"] == 42);
 	}
 
-	SUBCASE("File exists, relative path is allowed.") {
+	SUBCASE("File exists, relative path is allowed.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {"."});
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "allowed.lua"));
@@ -99,7 +100,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		CHECK(sandbox["bar"] == 42);
 	}
 
-	SUBCASE("File[s] exist, path[s] are allowed.") {
+	SUBCASE("File[s] exist, path[s] are allowed.")
+	{
 		const auto scriptsRoot = wrkDir / "..";
 		fs::create_directories(wrkDir / "../mods");
 		REQUIRE(createScriptFile(scriptsRoot / "mods/allowed.lua", files::script));
@@ -119,7 +121,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		CHECK(sandbox["bar"] == 42);
 	}
 
-	SUBCASE("File exists, path is allowed but messy.") {
+	SUBCASE("File exists, path is allowed but messy.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "../scripts/./allowed.lua"));
@@ -129,28 +132,32 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 		CHECK(sandbox["bar"] == 42);
 	}
 
-	SUBCASE("File does not exist, path is allowed.") {
+	SUBCASE("File does not exist, path is allowed.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "non-existent.lua"));
 		CHECK_FALSE(result.valid());
 	}
 
-	SUBCASE("File exists, path is forbidden.") {
+	SUBCASE("File exists, path is forbidden.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "../forbidden.lua"));
 		CHECK_FALSE(result.valid());
 	}
 
-	SUBCASE("File exists, but sandbox has no allowed path.") {
+	SUBCASE("File exists, but sandbox has no allowed path.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
 		auto result = sandbox.runFile(fs::path(wrkDir / "allowed.lua"));
 		CHECK_FALSE(result.valid());
 	}
 
-	SUBCASE("Trying to load precompiled bytecode.") {
+	SUBCASE("Trying to load precompiled bytecode.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		REQUIRE(createBytecodeFile(wrkDir / "bytecode.lua"));
@@ -160,8 +167,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.") {
 	}
 }
 
-TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.") {
-
+TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.")
+{
 	LuaState lua;
 
 	const auto tmpDir = TempDir();
@@ -172,7 +179,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.") {
 	REQUIRE(createScriptFile(wrkDir / "../forbidden.lua", files::script));
 	REQUIRE(createScriptFile(wrkDir / "modules/module.lua", files::module));
 
-	SUBCASE("File exists, path is allowed.") {
+	SUBCASE("File exists, path is allowed.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		sandbox.run(R"(result = dofile("script.lua"))");
@@ -181,7 +189,8 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.") {
 		CHECK(sandbox["bar"] == 42);
 	}
 
-	SUBCASE("File exists, path is allowed but messy") {
+	SUBCASE("File exists, path is allowed but messy")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		sandbox.run(R"(result = dofile("../scripts/./script.lua"))");
@@ -190,21 +199,24 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.") {
 		CHECK(sandbox["bar"] == 42);
 	}
 
-	SUBCASE("File does not exist, path is allowed.") {
+	SUBCASE("File does not exist, path is allowed.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		sandbox.run(R"(result = dofile("non-existent.lua"))");
 		CHECK(sandbox["result"] == sol::nil);
 	}
 
-	SUBCASE("File exists, path is forbidden.") {
+	SUBCASE("File exists, path is forbidden.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		sandbox.run(R"(result = dofile("../forbidden.lua"))");
 		CHECK(sandbox["result"] == sol::nil);
 	}
 
-	SUBCASE("Load existed script file as a module.") {
+	SUBCASE("Load existed script file as a module.")
+	{
 		LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom, wrkDir, {wrkDir});
 
 		sandbox.run(R"(

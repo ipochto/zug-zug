@@ -1,1 +1,1 @@
-extern int zzMain(int argc, char* argv[]);
+extern int zzMain(int argc, char *argv[]);
