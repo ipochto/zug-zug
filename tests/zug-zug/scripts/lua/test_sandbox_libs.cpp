@@ -1,8 +1,10 @@
-#include <doctest/doctest.h>
-#include <string>
 #include "scripts/lua/runtime.hpp"
 
-TEST_CASE("LuaState require loads libraries") {
+#include <doctest/doctest.h>
+#include <string>
+
+TEST_CASE("LuaState require loads libraries")
+{
 	LuaState lua;
 
 	REQUIRE_FALSE(lua.state["assert"].valid());
@@ -12,14 +14,16 @@ TEST_CASE("LuaState require loads libraries") {
 	CHECK(lua.state["assert"].valid());
 }
 
-TEST_CASE("LuaRuntime empty preset has no functions") {
+TEST_CASE("LuaRuntime empty preset has no functions")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
 	CHECK_FALSE(sandbox["assert"].valid());
 }
 
-TEST_CASE("LuaState require does not loads libraries into LuaRuntime") {
+TEST_CASE("LuaState require does not loads libraries into LuaRuntime")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
@@ -32,7 +36,8 @@ TEST_CASE("LuaState require does not loads libraries into LuaRuntime") {
 	CHECK_FALSE(sandbox["string"].valid());
 }
 
-TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries manually") {
+TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries manually")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
 
@@ -43,7 +48,8 @@ TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries man
 	CHECK_FALSE(sandbox["string"].valid());
 }
 
-TEST_CASE("LuaRuntime custom preset allows to load libraries manually") {
+TEST_CASE("LuaRuntime custom preset allows to load libraries manually")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
@@ -56,7 +62,8 @@ TEST_CASE("LuaRuntime custom preset allows to load libraries manually") {
 	CHECK(sandbox["type"].valid());
 }
 
-TEST_CASE("LuaRuntime base preset allows safe functions") {
+TEST_CASE("LuaRuntime base preset allows safe functions")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
 
@@ -66,7 +73,8 @@ TEST_CASE("LuaRuntime base preset allows safe functions") {
 	CHECK(result.as<std::string>() == "string");
 }
 
-TEST_CASE("LuaRuntime restricted string functions not available") {
+TEST_CASE("LuaRuntime restricted string functions not available")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
@@ -77,7 +85,8 @@ TEST_CASE("LuaRuntime restricted string functions not available") {
 	CHECK_FALSE(sandbox["string"]["dump"].valid());
 }
 
-TEST_CASE("LuaRuntime restricted os functions not available") {
+TEST_CASE("LuaRuntime restricted os functions not available")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
@@ -88,7 +97,8 @@ TEST_CASE("LuaRuntime restricted os functions not available") {
 	CHECK_FALSE(sandbox["os"]["execute"].valid());
 }
 
-TEST_CASE("LuaRuntime restricted debug library not available") {
+TEST_CASE("LuaRuntime restricted debug library not available")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
@@ -96,7 +106,8 @@ TEST_CASE("LuaRuntime restricted debug library not available") {
 	CHECK_FALSE(sandbox["debug"].valid());
 }
 
-TEST_CASE("LuaRuntime run executes code") {
+TEST_CASE("LuaRuntime run executes code")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
 
@@ -104,7 +115,8 @@ TEST_CASE("LuaRuntime run executes code") {
 	CHECK(result.get<std::string>() == "42");
 }
 
-TEST_CASE("LuaRuntime operator[] variable access") {
+TEST_CASE("LuaRuntime operator[] variable access")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
 
@@ -113,7 +125,8 @@ TEST_CASE("LuaRuntime operator[] variable access") {
 	CHECK(result.get<int>() == 246);
 }
 
-TEST_CASE("LuaRuntime sandbox keeps objects isolated from global lua") {
+TEST_CASE("LuaRuntime sandbox keeps objects isolated from global lua")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
 
@@ -126,7 +139,8 @@ TEST_CASE("LuaRuntime sandbox keeps objects isolated from global lua") {
 	CHECK(result.get<int>() == 642);
 }
 
-TEST_CASE("LuaRuntime sandbox drops objects after reset()") {
+TEST_CASE("LuaRuntime sandbox drops objects after reset()")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
 
@@ -138,7 +152,8 @@ TEST_CASE("LuaRuntime sandbox drops objects after reset()") {
 	CHECK_FALSE(sandbox["foo"].valid());
 }
 
-TEST_CASE("LuaRuntime sandbox reloads libraries after reset()") {
+TEST_CASE("LuaRuntime sandbox reloads libraries after reset()")
+{
 	LuaState lua;
 	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
 
