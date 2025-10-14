@@ -1,19 +1,21 @@
 ---
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html#configurable-format-style-options
 Language:        Cpp
 # BasedOnStyle:  LLVM
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
+AlignArrayOfStructures: None
 AlignConsecutiveMacros: false
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: DontAlign
 AlignOperands: AlignAfterOperator
-AlignTrailingComments: false
+AlignTrailingComments: Always
 AllowAllArgumentsOnNextLine: true
-AllowAllConstructorInitializersOnNextLine: false # deprecated
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortLambdasOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: true
@@ -28,7 +30,7 @@ BraceWrapping:
   AfterCaseLabel:  true
   AfterClass:      true
   AfterControlStatement: false
-  AfterEnum:       true
+  AfterEnum:       false
   AfterFunction:   true
   AfterNamespace:  true
   AfterObjCDeclaration: true
@@ -43,17 +45,16 @@ BraceWrapping:
   SplitEmptyNamespace: false
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Custom
+BreakBeforeConceptDeclarations: Always
 BreakBeforeInheritanceComma: false
 BreakInheritanceList: AfterColon
 BreakBeforeTernaryOperators: true
-BreakConstructorInitializersBeforeComma: false
-BreakConstructorInitializers: AfterColon
+BreakConstructorInitializers: BeforeColon
 BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true
 ColumnLimit: 100
 CommentPragmas:  '^ IWYU pragma:'
 CompactNamespaces: false
-ConstructorInitializerAllOnOneLineOrOnePerLine: true # deprecated
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
@@ -97,13 +98,13 @@ LambdaBodyIndentation: Signature
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: None
+NamespaceIndentation: All
 ObjCBinPackProtocolList: Auto
 ObjCBlockIndentWidth: 2
 ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: true
 PPIndentWidth: 1
-#PackConstructorInitializers: Never
+PackConstructorInitializers: Never
 PenaltyBreakAssignment: 2
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
@@ -116,7 +117,6 @@ PointerAlignment: Right
 #QualifierOrder: ['static', 'inline', 'constexpr', 'restrict', 'const', 'volatile', 'type']
 ReferenceAlignment: Right
 ReflowComments: false
-#RemoveBracesLLVM: false
 #RequiresClausePosition: OwnLine
 #SeparateDefinitionBlocks: Always
 ShortNamespaceLines: 0
@@ -145,6 +145,6 @@ SpaceBeforeSquareBrackets: false
 Standard:        Latest
 TabWidth:        4
 UseCRLF:         false
-UseTab:          AlignWithSpaces
+UseTab:          Always
 ...
 

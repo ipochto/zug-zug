@@ -1,8 +1,10 @@
-#include <doctest/doctest.h>
-#include <vector>
 #include "utils/filesystem.hpp"
 
-TEST_CASE("fs_utils: startsWith absolute base") {
+#include <doctest/doctest.h>
+#include <vector>
+
+TEST_CASE("fs_utils: startsWith absolute base")
+{
 	const auto wrkDir = fs::path("/the/path/to/game/data");
 
 	CHECK(fs_utils::startsWith(fs::path(wrkDir / "scripts"), wrkDir));
@@ -14,7 +16,8 @@ TEST_CASE("fs_utils: startsWith absolute base") {
 	CHECK_FALSE(fs_utils::startsWith(fs::path("../scripts"), wrkDir));
 }
 
-TEST_CASE("fs_utils: startsWith relative base") {
+TEST_CASE("fs_utils: startsWith relative base")
+{
 	const auto wrkDir = fs::path("game/data");
 
 	CHECK(fs_utils::startsWith(fs::path(wrkDir / "scripts"), wrkDir));
@@ -26,9 +29,10 @@ TEST_CASE("fs_utils: startsWith relative base") {
 	CHECK_FALSE(fs_utils::startsWith(fs::path("../scripts"), wrkDir));
 }
 
-TEST_CASE("fs_utils: startsWith range of bases") {
+TEST_CASE("fs_utils: startsWith range of bases")
+{
 	const auto wrkDir = fs::path("/the/path/to/game/data");
-	const auto allowedPaths = std::vector<fs::path> {
+	const auto allowedPaths = std::vector<fs::path>{
 		{wrkDir / "scripts"},
 		{wrkDir / "mods"}
 	};
