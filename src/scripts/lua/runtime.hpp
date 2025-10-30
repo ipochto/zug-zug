@@ -53,13 +53,13 @@ public:
 		setPathsForScripts(root, allowedPaths);
 		reset(false);
 	}
+	~LuaRuntime() = default;
 
 	LuaRuntime(const LuaRuntime &) = delete;
-	LuaRuntime(LuaRuntime &&) = delete;
 	LuaRuntime &operator=(const LuaRuntime &) = delete;
-	LuaRuntime &operator=(LuaRuntime &&) = delete;
 
-	~LuaRuntime() = default;
+	LuaRuntime(LuaRuntime &&) = default;
+	LuaRuntime &operator=(LuaRuntime &&) = default;
 
 	auto operator[](auto &&key) noexcept { return sandbox[std::forward<decltype(key)>(key)]; }
 	void reset(bool doCollectGrbg = false);
