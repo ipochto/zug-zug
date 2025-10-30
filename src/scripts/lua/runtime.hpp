@@ -17,7 +17,11 @@ concept SolLibContainer =
 class LuaState
 {
 public:
-	LuaState() noexcept = default;
+	sol::state state;
+
+	LuaState() = default;
+	~LuaState() = default;
+
 	LuaState(const LuaState &) = delete;
 	LuaState(LuaState &&) = delete;
 	LuaState &operator=(const LuaState &) = delete;
@@ -25,8 +29,6 @@ public:
 
 	[[nodiscard]]
 	bool require(sol::lib lib);
-
-	sol::state state;
 
 private:
 	bool isLibraryLoaded(sol::lib lib) const noexcept { return loadedLibs.contains(lib); }
@@ -91,7 +93,7 @@ private:
 
 	void loadLibs(const SolLibContainer auto &libs)
 	{
-		for (const auto lib : libs) {
+		for (const auto &lib : libs) {
 			loadLib(lib);
 		}
 	}

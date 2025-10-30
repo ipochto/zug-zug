@@ -24,21 +24,21 @@ LuaRuntime::sandboxPresets{
 
 const LuaRuntime::LibsSandboxingRulesMap
 LuaRuntime::libsSandboxingRules{
-	{sol::lib::base, {
-		.allowed = {"assert", "error", "ipairs", "next", "pairs", "pcall", "select",
-					"tonumber", "tostring", "type", "unpack", "_VERSION", "xpcall"}}},
-	{sol::lib::coroutine, {
-		.allowedAllExceptRestricted = true}},
-	{sol::lib::math, {
-		.allowedAllExceptRestricted = true,
-		.restricted = {"random", "randomseed"}}},
-	{sol::lib::os, {
-		.allowed = {"clock", "date", "difftime", "time"}}},
-	{sol::lib::string, {
-		.allowedAllExceptRestricted = true,
-		.restricted = {"dump"}}},
-	{sol::lib::table, {
-		.allowedAllExceptRestricted = true}}
+	{sol::lib::base,
+		{.allowed = {"assert", "error", "ipairs", "next", "pairs", "pcall", "select",
+					 "tonumber", "tostring", "type", "unpack", "_VERSION", "xpcall"}}},
+	{sol::lib::coroutine,
+		{.allowedAllExceptRestricted = true}},
+	{sol::lib::math,
+		{.allowedAllExceptRestricted = true,
+		 .restricted = {"random", "randomseed"}}},
+	{sol::lib::os,
+		{.allowed = {"clock", "difftime", "time"}}},
+	{sol::lib::string,
+		{.allowedAllExceptRestricted = true,
+		 .restricted = {"dump"}}},
+	{sol::lib::table,
+		{.allowedAllExceptRestricted = true}}
 };
 // clang-format on
 
@@ -71,16 +71,15 @@ namespace lua
 	auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>
 	{
 		const auto &names = lua::details::libsLookupTable;
-		const auto it = names.find(lib);
-		if (it == names.end()) {
-			return std::nullopt;
+		if (auto it = names.find(lib); it != names.end()) {
+			return it->second;
 		}
-		return it->second;
+		return std::nullopt;
 	}
 
 	auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>
 	{
-		for (const auto [lib, name] : lua::details::libsLookupTable) {
+		for (const auto &[lib, name] : lua::details::libsLookupTable) {
 			if (name == libName) {
 				return lib;
 			}
@@ -126,7 +125,7 @@ namespace lua
 
 bool LuaState::require(sol::lib lib)
 {
-	if (not isLibraryLoaded(lib)) {
+	if (!isLibraryLoaded(lib)) {
 		loadLibrary(lib);
 	}
 	return isLibraryLoaded(lib);
@@ -220,11 +219,10 @@ bool LuaRuntime::loadSafePrint()
 
 auto LuaRuntime::checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>
 {
-	const auto it = libsSandboxingRules.find(lib);
-	if (it == libsSandboxingRules.end()) {
-		return std::nullopt;
+	if (const auto it = libsSandboxingRules.find(lib); it != libsSandboxingRules.end()) {
+		return it->second;
 	}
-	return it->second;
+	return std::nullopt;
 }
 
 bool LuaRuntime::loadLib(sol::lib lib)
@@ -263,13 +261,13 @@ void LuaRuntime::addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules)
 		for (const auto &[name, object] : src) {
 			dst[name] = object;
 		}
+		for (const auto &name : rules.restricted) {
+			dst[name] = sol::nil;
+		}
 	} else {
 		for (const auto &name : rules.allowed) {
 			dst[name] = src[name];
 		}
-	}
-	for (const auto &name : rules.restricted) {
-		dst[name] = sol::nil;
 	}
 }
 
