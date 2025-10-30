@@ -4,6 +4,7 @@
 #include "utils/filesystem.hpp"
 #include "utils/optional_ref.hpp"
 
+#include <map>
 #include <set>
 #include <string_view>
 #include <vector>
@@ -73,7 +74,7 @@ public:
 private:
 	using LibNames = std::vector<std::string_view>;
 	using Libs = std::vector<sol::lib>;
-	using SandboxPresets = std::unordered_map<Presets, Libs>;
+	using SandboxPresets = std::map<Presets, Libs>;
 
 	struct LibSymbolsRules
 	{
@@ -82,7 +83,7 @@ private:
 		LibNames restricted{};
 	};
 
-	using LibsSandboxingRulesMap = std::unordered_map<sol::lib, LibSymbolsRules>;
+	using LibsSandboxingRulesMap = std::map<sol::lib, LibSymbolsRules>;
 
 	auto checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>;
 
