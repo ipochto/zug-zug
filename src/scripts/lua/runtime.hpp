@@ -42,7 +42,7 @@ public:
 	enum class Presets { Base, Configs, Custom };
 	using Paths = std::vector<fs::path>;
 
-	explicit LuaRuntime(LuaState &state,
+	explicit LuaRuntime(std::shared_ptr<LuaState> state,
 						Presets preset,
 						const fs::path &root = {},
 						const Paths &allowedPaths = {})
@@ -112,7 +112,7 @@ private:
 	void print(sol::variadic_args args);
 
 private:
-	LuaState &lua;
+	std::shared_ptr<LuaState> lua;
 	sol::environment sandbox;
 
 	Presets preset{Presets::Base};

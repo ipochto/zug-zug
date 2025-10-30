@@ -71,7 +71,7 @@ namespace files
 
 TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.")
 {
-	LuaState lua;
+	auto lua = std::make_shared<LuaState>();
 
 	const auto tmpDir = TempDir();
 	const auto wrkDir = fs::absolute(tmpDir.path / "scripts");
@@ -169,7 +169,7 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.")
 
 TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.")
 {
-	LuaState lua;
+	auto lua = std::make_shared<LuaState>();
 
 	const auto tmpDir = TempDir();
 	const auto wrkDir = fs::absolute(tmpDir.path / "scripts");
