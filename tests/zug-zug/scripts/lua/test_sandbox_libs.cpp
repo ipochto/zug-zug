@@ -168,3 +168,25 @@ TEST_CASE("LuaRuntime sandbox reloads libraries after reset()")
 	REQUIRE(sandbox["string"].valid());
 	CHECK(sandbox["string"]["upper"].valid());
 }
+
+TEST_CASE("Multiple LuaRuntime sandboxes on the single LuaState")
+{
+	auto lua = std::make_shared<LuaState>();
+
+	auto sandboxes = std::map<std::string, LuaRuntime>();
+
+	sandboxes.emplace("core", LuaRuntime(lua, LuaRuntime::Presets::Core));
+	sandboxes.emplace("complete", LuaRuntime(lua, LuaRuntime::Presets::Complete));
+	
+	auto &core = sandboxes.at("core");
+	auto &complete = sandboxes.at("complete");
+
+	core.run(R"(name = "core")");
+	complete.run(R"(name = "complete")");
+
+	REQUIRE(core["name"].valid());
+	CHECK_EQ(core["name"].get<std::string>(), "core");
+
+	REQUIRE(complete["name"].valid());
+	CHECK_EQ(complete["name"].get<std::string>(), "complete");
+}
