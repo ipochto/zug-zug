@@ -39,7 +39,7 @@ TEST_CASE("LuaState require does not loads libraries into LuaRuntime")
 TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries manually")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
 
 	REQUIRE_FALSE(sandbox["string"].valid());
 
@@ -65,7 +65,7 @@ TEST_CASE("LuaRuntime custom preset allows to load libraries manually")
 TEST_CASE("LuaRuntime base preset allows safe functions")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
 
 	REQUIRE(sandbox["type"].valid());
 
@@ -109,7 +109,7 @@ TEST_CASE("LuaRuntime restricted debug library not available")
 TEST_CASE("LuaRuntime run executes code")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
 
 	auto result = sandbox.run("return tostring(42)");
 	CHECK(result.get<std::string>() == "42");
@@ -118,7 +118,7 @@ TEST_CASE("LuaRuntime run executes code")
 TEST_CASE("LuaRuntime operator[] variable access")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
 
 	sandbox["x"] = 123;
 	auto result = sandbox.run("return x * 2");
@@ -128,7 +128,7 @@ TEST_CASE("LuaRuntime operator[] variable access")
 TEST_CASE("LuaRuntime sandbox keeps objects isolated from global lua")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
 
 	sandbox["x"] = 123;
 	lua->state["x"] = 321;
@@ -142,7 +142,7 @@ TEST_CASE("LuaRuntime sandbox keeps objects isolated from global lua")
 TEST_CASE("LuaRuntime sandbox drops objects after reset()")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Base);
+	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
 
 	sandbox["foo"] = "bar";
 	REQUIRE(sandbox["foo"].valid());

@@ -39,7 +39,7 @@ private:
 class LuaRuntime
 {
 public:
-	enum class Presets { Base, Configs, Custom };
+	enum class Presets { Core, Minimal, Complete, Custom };
 	using Paths = std::vector<fs::path>;
 
 	explicit LuaRuntime(std::shared_ptr<LuaState> state,
@@ -115,7 +115,7 @@ private:
 	std::shared_ptr<LuaState> lua;
 	sol::environment sandbox;
 
-	Presets preset{Presets::Base};
+	Presets preset{Presets::Core};
 	fs::path scriptsRoot{}; // Absolute, lexically normalized path.
 							// Relative paths to script files are resolved from this location.
 							// If empty, loading external scripts is prohibited.

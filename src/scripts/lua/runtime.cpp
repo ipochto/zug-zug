@@ -8,13 +8,17 @@
 // clang-format off
 const LuaRuntime::SandboxPresets
 LuaRuntime::sandboxPresets{
-	{Presets::Base, {
-		sol::lib::base,
-		sol::lib::table}},
-	{Presets::Configs, {
-		sol::lib::base,
-		sol::lib::table,
-		sol::lib::string}},
+	{Presets::Core, {}},
+	{Presets::Minimal,
+		{sol::lib::base,
+		 sol::lib::table}},
+	{Presets::Complete,
+		{sol::lib::base,
+		 sol::lib::coroutine,
+		 sol::lib::math,
+		 sol::lib::os,
+		 sol::lib::string,
+		 sol::lib::table}},
 	{Presets::Custom, {}}
 };
 
