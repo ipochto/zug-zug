@@ -39,13 +39,13 @@ private:
 };
 
 // Sandboxed lua runtime
-class LuaRuntime
+class LuaSandbox
 {
 public:
 	enum class Presets { Core, Minimal, Complete, Custom };
 	using Paths = std::vector<fs::path>;
 
-	explicit LuaRuntime(std::shared_ptr<LuaState> state,
+	explicit LuaSandbox(std::shared_ptr<LuaState> state,
 						Presets preset,
 						const fs::path &root = {},
 						const Paths &allowedPaths = {})
@@ -55,13 +55,13 @@ public:
 		setPathsForScripts(root, allowedPaths);
 		reset(false);
 	}
-	~LuaRuntime() = default;
+	~LuaSandbox() = default;
 
-	LuaRuntime(const LuaRuntime &) = delete;
-	LuaRuntime &operator=(const LuaRuntime &) = delete;
+	LuaSandbox(const LuaSandbox &) = delete;
+	LuaSandbox &operator=(const LuaSandbox &) = delete;
 
-	LuaRuntime(LuaRuntime &&) = default;
-	LuaRuntime &operator=(LuaRuntime &&) = default;
+	LuaSandbox(LuaSandbox &&) = default;
+	LuaSandbox &operator=(LuaSandbox &&) = default;
 
 	auto operator[](auto &&key) noexcept { return sandbox[std::forward<decltype(key)>(key)]; }
 	void reset(bool doCollectGrbg = false);
@@ -97,7 +97,7 @@ private:
 			loadLib(lib);
 		}
 	}
-	void addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules);
+	void copyLibFromState(sol::lib lib, const LibSymbolsRules &rules);
 
 	void setPathsForScripts(const fs::path &root, const Paths &allowed);
 

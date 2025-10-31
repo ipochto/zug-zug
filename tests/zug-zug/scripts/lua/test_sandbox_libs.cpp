@@ -17,7 +17,7 @@ TEST_CASE("LuaState require loads libraries")
 TEST_CASE("LuaRuntime empty preset has no functions")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom);
 
 	CHECK_FALSE(sandbox["assert"].valid());
 }
@@ -25,7 +25,7 @@ TEST_CASE("LuaRuntime empty preset has no functions")
 TEST_CASE("LuaState require does not loads libraries into LuaRuntime")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom);
 
 	REQUIRE_FALSE(lua->state["string"].valid());
 	REQUIRE_FALSE(sandbox["string"].valid());
@@ -39,7 +39,7 @@ TEST_CASE("LuaState require does not loads libraries into LuaRuntime")
 TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries manually")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal);
 
 	REQUIRE_FALSE(sandbox["string"].valid());
 
@@ -51,7 +51,7 @@ TEST_CASE("LuaRuntime a named fixed preset does not allows to load libraries man
 TEST_CASE("LuaRuntime custom preset allows to load libraries manually")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom);
 
 	REQUIRE_FALSE(sandbox["assert"].valid());
 	REQUIRE_FALSE(sandbox["type"].valid());
@@ -65,7 +65,7 @@ TEST_CASE("LuaRuntime custom preset allows to load libraries manually")
 TEST_CASE("LuaRuntime base preset allows safe functions")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal);
 
 	REQUIRE(sandbox["type"].valid());
 
@@ -76,7 +76,7 @@ TEST_CASE("LuaRuntime base preset allows safe functions")
 TEST_CASE("LuaRuntime restricted string functions not available")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom);
 
 	REQUIRE(sandbox.require(sol::lib::string));
 
@@ -88,7 +88,7 @@ TEST_CASE("LuaRuntime restricted string functions not available")
 TEST_CASE("LuaRuntime restricted os functions not available")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom);
 
 	REQUIRE(sandbox.require(sol::lib::os));
 
@@ -100,7 +100,7 @@ TEST_CASE("LuaRuntime restricted os functions not available")
 TEST_CASE("LuaRuntime restricted debug library not available")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom);
 
 	CHECK_FALSE(sandbox.require(sol::lib::debug));
 	CHECK_FALSE(sandbox["debug"].valid());
@@ -109,7 +109,7 @@ TEST_CASE("LuaRuntime restricted debug library not available")
 TEST_CASE("LuaRuntime run executes code")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal);
 
 	auto result = sandbox.run("return tostring(42)");
 	CHECK(result.get<std::string>() == "42");
@@ -118,7 +118,7 @@ TEST_CASE("LuaRuntime run executes code")
 TEST_CASE("LuaRuntime operator[] variable access")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal);
 
 	sandbox["x"] = 123;
 	auto result = sandbox.run("return x * 2");
@@ -128,7 +128,7 @@ TEST_CASE("LuaRuntime operator[] variable access")
 TEST_CASE("LuaRuntime sandbox keeps objects isolated from global lua")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal);
 
 	sandbox["x"] = 123;
 	lua->state["x"] = 321;
@@ -142,7 +142,7 @@ TEST_CASE("LuaRuntime sandbox keeps objects isolated from global lua")
 TEST_CASE("LuaRuntime sandbox drops objects after reset()")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Minimal);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal);
 
 	sandbox["foo"] = "bar";
 	REQUIRE(sandbox["foo"].valid());
@@ -155,7 +155,7 @@ TEST_CASE("LuaRuntime sandbox drops objects after reset()")
 TEST_CASE("LuaRuntime sandbox reloads libraries after reset()")
 {
 	auto lua = std::make_shared<LuaState>();
-	LuaRuntime sandbox(lua, LuaRuntime::Presets::Custom);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom);
 
 	CHECK(sandbox.require(sol::lib::base));
 	CHECK(sandbox.require(sol::lib::string));
@@ -173,10 +173,10 @@ TEST_CASE("Multiple LuaRuntime sandboxes on the single LuaState")
 {
 	auto lua = std::make_shared<LuaState>();
 
-	auto sandboxes = std::map<std::string, LuaRuntime>();
+	auto sandboxes = std::map<std::string, LuaSandbox>();
 
-	sandboxes.emplace("core", LuaRuntime(lua, LuaRuntime::Presets::Core));
-	sandboxes.emplace("complete", LuaRuntime(lua, LuaRuntime::Presets::Complete));
+	sandboxes.emplace("core", LuaSandbox(lua, LuaSandbox::Presets::Core));
+	sandboxes.emplace("complete", LuaSandbox(lua, LuaSandbox::Presets::Complete));
 	
 	auto &core = sandboxes.at("core");
 	auto &complete = sandboxes.at("complete");
@@ -189,4 +189,34 @@ TEST_CASE("Multiple LuaRuntime sandboxes on the single LuaState")
 
 	REQUIRE(complete["name"].valid());
 	CHECK_EQ(complete["name"].get<std::string>(), "complete");
+}
+
+TEST_CASE("Multiple LuaRuntime sandboxes on the single LuaState")
+{
+
+	auto lua = std::make_shared<LuaState>();
+	auto sandboxes = std::map<std::string, LuaSandbox>();
+
+	sandboxes.emplace("configs", LuaSandbox(lua, LuaSandbox::Presets::Custom));
+	sandboxes.emplace("UI", LuaSandbox(lua, LuaSandbox::Presets::Custom));
+
+	auto &luaConfigs = sandboxes.at("configs");
+	auto &luaUI = sandboxes.at("UI");
+
+	lua->state["name"] = "Raw Lua-state";
+	luaConfigs["name"] = "'configs' sandbox";
+	luaUI["name"] = "'UI' sandbox";
+
+	const auto whoAmI= R"(
+		print ("This is " .. name)
+	)";
+
+	if (lua->require(sol::lib::base)) {
+
+		lua->state.script(whoAmI);
+		for (auto &[name, sandbox] : sandboxes) {
+			sandbox["print"] = lua->state["print"];
+			sandbox.run(whoAmI);
+		}
+	}
 }
