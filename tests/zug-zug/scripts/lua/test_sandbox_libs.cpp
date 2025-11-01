@@ -9,7 +9,7 @@ TEST_CASE("LuaState require loads libraries")
 
 	REQUIRE_FALSE(lua->state["assert"].valid());
 
-	REQUIRE(lua->require(sol::lib::base));
+	lua->require(sol::lib::base);
 
 	CHECK(lua->state["assert"].valid());
 }
@@ -30,7 +30,7 @@ TEST_CASE("LuaState require does not loads libraries into LuaRuntime")
 	REQUIRE_FALSE(lua->state["string"].valid());
 	REQUIRE_FALSE(sandbox["string"].valid());
 
-	REQUIRE(lua->require(sol::lib::string));
+	lua->require(sol::lib::string);
 
 	CHECK(lua->state["string"].valid());
 	CHECK_FALSE(sandbox["string"].valid());
@@ -211,12 +211,12 @@ TEST_CASE("Multiple LuaRuntime sandboxes on the single LuaState")
 		print ("This is " .. name)
 	)";
 
-	if (lua->require(sol::lib::base)) {
+	lua->require(sol::lib::base);
 
-		lua->state.script(whoAmI);
-		for (auto &[name, sandbox] : sandboxes) {
-			sandbox["print"] = lua->state["print"];
-			sandbox.run(whoAmI);
-		}
+	lua->state.script(whoAmI);
+	for (auto &[name, sandbox] : sandboxes) {
+		sandbox["print"] = lua->state["print"];
+		sandbox.run(whoAmI);
 	}
+
 }

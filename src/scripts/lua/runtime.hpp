@@ -27,12 +27,13 @@ public:
 	LuaState &operator=(const LuaState &) = delete;
 	LuaState &operator=(LuaState &&) = delete;
 
-	[[nodiscard]]
-	bool require(sol::lib lib);
-
-private:
-	bool isLibraryLoaded(sol::lib lib) const noexcept { return loadedLibs.contains(lib); }
-	void loadLibrary(sol::lib lib);
+	void require(sol::lib lib)
+	{
+		if (!loadedLibs.contains(lib)) {
+			state.open_libraries(lib);
+			loadedLibs.insert(lib);		
+		}
+	}
 
 private:
 	std::set<sol::lib> loadedLibs;
@@ -111,7 +112,7 @@ private:
 	}
 	auto dofile(sol::stack_object fileName) -> sol::protected_function_result;
 	void loadSafeExternalScriptFilesRoutine();
-	bool loadSafePrint();
+	void loadSafePrint();
 	void print(sol::variadic_args args);
 
 private:

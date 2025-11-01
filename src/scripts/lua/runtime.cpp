@@ -123,20 +123,6 @@ namespace lua
 	}
 } // namespace lua
 
-bool LuaState::require(sol::lib lib)
-{
-	if (!isLibraryLoaded(lib)) {
-		loadLibrary(lib);
-	}
-	return isLibraryLoaded(lib);
-}
-
-void LuaState::loadLibrary(sol::lib lib)
-{
-	state.open_libraries(lib);
-	loadedLibs.insert(lib);
-}
-
 void LuaSandbox::reset(bool doCollectGrbg /* = false */)
 {
 	sandbox = sol::environment(lua->state, sol::create);
@@ -208,13 +194,10 @@ void LuaSandbox::loadSafeExternalScriptFilesRoutine()
 	sandbox["require"] = sandbox["dofile"];
 }
 
-bool LuaSandbox::loadSafePrint()
+void LuaSandbox::loadSafePrint()
 {
-	if (!lua->require(sol::lib::base)) {
-		return false;
-	}
+	lua->require(sol::lib::base);
 	sandbox.set_function("print", &LuaSandbox::print, this);
-	return true;
 }
 
 auto LuaSandbox::checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>
@@ -231,9 +214,8 @@ bool LuaSandbox::loadLib(sol::lib lib)
 	if (!rules) {
 		return false;
 	}
-	if (!lua->require(lib)) {
-		return false;
-	}
+	lua->require(lib);
+
 	copyLibFromState(lib, *rules);
 	loadedLibs.insert(lib);
 	return true;
