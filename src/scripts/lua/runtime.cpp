@@ -125,7 +125,7 @@ namespace lua
 
 void LuaSandbox::reset(bool doCollectGrbg /* = false */)
 {
-	sandbox = sol::environment(lua->state, sol::create);
+	sandbox = sol::environment(runtime->state, sol::create);
 	sandbox["_G"] = sandbox;
 
 	if (loadedLibs.empty()) {
@@ -137,13 +137,13 @@ void LuaSandbox::reset(bool doCollectGrbg /* = false */)
 	loadSafeExternalScriptFilesRoutine();
 
 	if (doCollectGrbg) {
-		lua->state.collect_garbage();
+		runtime->state.collect_garbage();
 	}
 }
 
 auto LuaSandbox::run(std::string_view script) -> sol::protected_function_result
 {
-	return lua->state.safe_script(script, sandbox);
+	return runtime->state.safe_script(script, sandbox);
 }
 
 auto LuaSandbox::runFile(const fs::path &scriptFile) -> sol::protected_function_result
@@ -151,7 +151,7 @@ auto LuaSandbox::runFile(const fs::path &scriptFile) -> sol::protected_function_
 	auto error = [this, &scriptFile](std::string_view msg) {
 		const auto errMsg = fmt::format("{}: {}", msg, scriptFile.string());
 		spdlog::error("{}", errMsg);
-		return lua::makeFnCallResult(lua->state, errMsg, sol::call_status::file);
+		return lua::makeFnCallResult(runtime->state, errMsg, sol::call_status::file);
 	};
 
 	if (!fs::exists(scriptFile)) {
@@ -163,7 +163,7 @@ auto LuaSandbox::runFile(const fs::path &scriptFile) -> sol::protected_function_
 	if (lua::isBytecode(scriptFile)) {
 		return error("Attempting to run precompiled Lua bytecode");
 	}
-	return lua->state.safe_script_file(scriptFile.string(), sandbox);
+	return runtime->state.safe_script_file(scriptFile.string(), sandbox);
 }
 
 bool LuaSandbox::require(sol::lib lib)
@@ -176,7 +176,7 @@ bool LuaSandbox::require(sol::lib lib)
 
 auto LuaSandbox::dofile(sol::stack_object fileName) -> sol::protected_function_result
 {
-	auto nil = [this]() { return lua::makeFnCallResult(lua->state, sol::nil); };
+	auto nil = [this]() { return lua::makeFnCallResult(runtime->state, sol::nil); };
 
 	if (!fileName.is<std::string>()) {
 		return nil();
@@ -196,7 +196,7 @@ void LuaSandbox::loadSafeExternalScriptFilesRoutine()
 
 void LuaSandbox::loadSafePrint()
 {
-	lua->require(sol::lib::base);
+	runtime->require(sol::lib::base);
 	sandbox.set_function("print", &LuaSandbox::print, this);
 }
 
@@ -214,7 +214,7 @@ bool LuaSandbox::loadLib(sol::lib lib)
 	if (!rules) {
 		return false;
 	}
-	lua->require(lib);
+	runtime->require(lib);
 
 	copyLibFromState(lib, *rules);
 	loadedLibs.insert(lib);
@@ -229,12 +229,12 @@ void LuaSandbox::copyLibFromState(sol::lib lib, const LibSymbolsRules &rules)
 	}
 	const auto libLookupName = (lib == sol::lib::base) ? "_G" : *libName;
 
-	const sol::table src = lua->state[libLookupName];
+	const sol::table src = runtime->state[libLookupName];
 	if (!src.valid()) {
 		return;
 	}
 	if (libLookupName != "_G") {
-		sandbox[libLookupName] = sol::table(lua->state, sol::create);
+		sandbox[libLookupName] = sol::table(runtime->state, sol::create);
 	}
 
 	sol::table dst = sandbox[libLookupName];

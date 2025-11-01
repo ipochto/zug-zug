@@ -14,18 +14,18 @@ concept SolLibContainer =
 	std::ranges::range<T>
 	&& std::same_as<std::remove_cvref_t<std::ranges::range_value_t<T>>, sol::lib>;
 
-class LuaState
+class LuaRuntime
 {
 public:
 	sol::state state;
 
-	LuaState() = default;
-	~LuaState() = default;
+	LuaRuntime() = default;
+	~LuaRuntime() = default;
 
-	LuaState(const LuaState &) = delete;
-	LuaState(LuaState &&) = delete;
-	LuaState &operator=(const LuaState &) = delete;
-	LuaState &operator=(LuaState &&) = delete;
+	LuaRuntime(const LuaRuntime &) = delete;
+	LuaRuntime(LuaRuntime &&) = delete;
+	LuaRuntime &operator=(const LuaRuntime &) = delete;
+	LuaRuntime &operator=(LuaRuntime &&) = delete;
 
 	void require(sol::lib lib)
 	{
@@ -39,22 +39,21 @@ private:
 	std::set<sol::lib> loadedLibs;
 };
 
-// Sandboxed lua runtime
 class LuaSandbox
 {
 public:
 	enum class Presets { Core, Minimal, Complete, Custom };
 	using Paths = std::vector<fs::path>;
 
-	explicit LuaSandbox(std::shared_ptr<LuaState> state,
+	explicit LuaSandbox(LuaRuntime &runtime,
 						Presets preset,
 						const fs::path &root = {},
 						const Paths &allowedPaths = {})
-		: lua(state),
+		: runtime(&runtime),
 		  preset(preset)
 	{
 		setPathsForScripts(root, allowedPaths);
-		reset(false);
+		reset();
 	}
 	~LuaSandbox() = default;
 
@@ -116,7 +115,7 @@ private:
 	void print(sol::variadic_args args);
 
 private:
-	std::shared_ptr<LuaState> lua;
+	LuaRuntime *runtime = {nullptr};
 	sol::environment sandbox;
 
 	Presets preset{Presets::Core};
