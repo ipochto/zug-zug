@@ -133,10 +133,13 @@ private:
 namespace lua
 {
 	[[nodiscard]]
-	auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>;
+	constexpr auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>;
 
 	[[nodiscard]]
-	auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>;
+	constexpr auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>;
+
+	[[nodiscard]]
+	constexpr auto libLookupName(sol::lib lib) -> std::string_view;
 
 	[[nodiscard]]
 	auto toString(sol::object obj) -> std::string;

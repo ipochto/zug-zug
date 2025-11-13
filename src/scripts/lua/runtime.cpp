@@ -1,9 +1,12 @@
 #include "lua/runtime.hpp"
 
+#include <array>
 #include <fmt/core.h>
 #include <fstream>
 #include <ranges>
 #include <spdlog/spdlog.h>
+
+namespace ranges = std::ranges;
 
 // clang-format off
 const LuaSandbox::SandboxPresets
@@ -46,45 +49,56 @@ namespace lua
 {
 	namespace details
 	{
-		using LibsLookupTable = std::unordered_map<sol::lib, std::string_view>;
+		struct LibNamePair
+		{
+			sol::lib lib;
+			std::string_view name;
+		};
 
 		// clang-format off
-		const auto libsLookupTable = LibsLookupTable {
-			{sol::lib::base,		"base"},
-			{sol::lib::bit32,		"bit32"}, // Lua 5.2+
-			{sol::lib::coroutine,	"coroutine"},
-			{sol::lib::debug,		"debug"},
-			{sol::lib::ffi,			"ffi"}, // LuaJIT only
-			{sol::lib::io,			"io"},
-			{sol::lib::jit,			"jit"}, // LuaJIT only
-			{sol::lib::math,		"math"},
-			{sol::lib::os,			"os"},
-			{sol::lib::package,		"package"},
-			{sol::lib::string,		"string"},
-			{sol::lib::table,		"table"},
-			{sol::lib::utf8,		"utf8"} // Lua 5.3+
+		constexpr auto libsNames = std::array {
+			LibNamePair{sol::lib::base,      "base"},
+			LibNamePair{sol::lib::bit32,     "bit32"}, // Lua 5.2+
+			LibNamePair{sol::lib::coroutine, "coroutine"},
+			LibNamePair{sol::lib::debug,     "debug"},
+			LibNamePair{sol::lib::ffi,       "ffi"}, // LuaJIT only
+			LibNamePair{sol::lib::io,        "io"},
+			LibNamePair{sol::lib::jit,       "jit"}, // LuaJIT only
+			LibNamePair{sol::lib::math,      "math"},
+			LibNamePair{sol::lib::os,        "os"},
+			LibNamePair{sol::lib::package,   "package"},
+			LibNamePair{sol::lib::string,    "string"},
+			LibNamePair{sol::lib::table,     "table"},
+			LibNamePair{sol::lib::utf8,      "utf8"} // Lua 5.3+
 		};
 		// clang-format on
-
 	} // namespace details
 
-	auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>
+	constexpr auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>
 	{
-		const auto &names = lua::details::libsLookupTable;
-		if (auto it = names.find(lib); it != names.end()) {
-			return it->second;
+		auto findLib = [lib](auto &lookup) -> bool { return lookup.lib == lib; };
+		
+		const auto &libs = lua::details::libsNames;
+		if (auto it = ranges::find_if(libs, findLib); it != libs.end()) {
+			return it->name;
 		}
 		return std::nullopt;
 	}
 
-	auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>
+	constexpr auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>
 	{
-		for (const auto &[lib, name] : lua::details::libsLookupTable) {
-			if (name == libName) {
-				return lib;
-			}
+		auto findLibName = [libName](auto &lookup) -> bool { return lookup.name == libName; };
+
+		const auto &libs = lua::details::libsNames;
+		if (auto it = ranges::find_if(libs, findLibName); it != libs.end()) {
+			return it->lib;
 		}
 		return std::nullopt;
+	}
+
+	constexpr auto libLookupName(sol::lib lib) -> std::string_view
+	{
+		return (lib == sol::lib::base) ? "_G" : lua::libName(lib).value_or("");
 	}
 
 	auto toString(sol::object obj) -> std::string
@@ -109,7 +123,7 @@ namespace lua
 		if (ifs.gcount() < static_cast<std::streamsize>(header.size())) {
 			return false;
 		}
-		return std::ranges::equal(header, signature);
+		return ranges::equal(header, signature);
 	}
 
 	auto makeFnCallResult(sol::state &lua,
@@ -223,20 +237,17 @@ bool LuaSandbox::loadLib(sol::lib lib)
 
 void LuaSandbox::copyLibFromState(sol::lib lib, const LibSymbolsRules &rules)
 {
-	const auto libName = lua::libName(lib);
-	if (!libName) {
+	const auto libLookupName = lua::libLookupName(lib);
+	if (libLookupName.empty()) {
 		return;
 	}
-	const auto libLookupName = (lib == sol::lib::base) ? "_G" : *libName;
-
 	const sol::table src = runtime->state[libLookupName];
 	if (!src.valid()) {
 		return;
 	}
-	if (libLookupName != "_G") {
+	if (lib != sol::lib::base) { // The 'base' is loaded directly into '_G', which already exists
 		sandbox[libLookupName] = sol::table(runtime->state, sol::create);
 	}
-
 	sol::table dst = sandbox[libLookupName];
 
 	if (rules.allowedAllExceptRestricted) {
