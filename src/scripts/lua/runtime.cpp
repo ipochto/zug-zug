@@ -49,27 +49,26 @@ namespace lua
 {
 	namespace details
 	{
-		struct LibNamePair
+		struct LibName
 		{
 			sol::lib lib;
 			std::string_view name;
 		};
-
 		// clang-format off
 		constexpr auto libsNames = std::array {
-			LibNamePair{sol::lib::base,      "base"},
-			LibNamePair{sol::lib::bit32,     "bit32"}, // Lua 5.2+
-			LibNamePair{sol::lib::coroutine, "coroutine"},
-			LibNamePair{sol::lib::debug,     "debug"},
-			LibNamePair{sol::lib::ffi,       "ffi"}, // LuaJIT only
-			LibNamePair{sol::lib::io,        "io"},
-			LibNamePair{sol::lib::jit,       "jit"}, // LuaJIT only
-			LibNamePair{sol::lib::math,      "math"},
-			LibNamePair{sol::lib::os,        "os"},
-			LibNamePair{sol::lib::package,   "package"},
-			LibNamePair{sol::lib::string,    "string"},
-			LibNamePair{sol::lib::table,     "table"},
-			LibNamePair{sol::lib::utf8,      "utf8"} // Lua 5.3+
+			LibName{sol::lib::base,      "base"},
+			LibName{sol::lib::bit32,     "bit32"}, // Lua 5.2+
+			LibName{sol::lib::coroutine, "coroutine"},
+			LibName{sol::lib::debug,     "debug"},
+			LibName{sol::lib::ffi,       "ffi"}, // LuaJIT only
+			LibName{sol::lib::io,        "io"},
+			LibName{sol::lib::jit,       "jit"}, // LuaJIT only
+			LibName{sol::lib::math,      "math"},
+			LibName{sol::lib::os,        "os"},
+			LibName{sol::lib::package,   "package"},
+			LibName{sol::lib::string,    "string"},
+			LibName{sol::lib::table,     "table"},
+			LibName{sol::lib::utf8,      "utf8"} // Lua 5.3+
 		};
 		// clang-format on
 	} // namespace details
@@ -188,7 +187,7 @@ bool LuaSandbox::require(sol::lib lib)
 	return false;
 }
 
-auto LuaSandbox::dofile(sol::stack_object fileName) -> sol::protected_function_result
+auto LuaSandbox::dofileReplace(sol::stack_object fileName) -> sol::protected_function_result
 {
 	auto nil = [this]() { return lua::makeFnCallResult(runtime->state, sol::nil); };
 
@@ -202,16 +201,34 @@ auto LuaSandbox::dofile(sol::stack_object fileName) -> sol::protected_function_r
 	return nil();
 }
 
+auto LuaSandbox::requireReplace(sol::stack_object target) -> sol::protected_function_result
+{
+	auto nil = [this]() { return lua::makeFnCallResult(runtime->state, sol::nil); };
+
+	if (!target.is<std::string>()) {
+		return nil();
+	}
+	const auto possibleLibName = target.as<std::string>();
+	if (const auto lib = lua::libByName(possibleLibName); lib.has_value()) {
+		if (require(*lib)) {
+			const auto libLookupName = lua::libLookupName(*lib);
+			return lua::makeFnCallResult(runtime->state, sandbox[libLookupName]);
+		}
+		return nil();
+	}
+	return dofileReplace(target);
+}
+
 void LuaSandbox::loadSafeExternalScriptFilesRoutine()
 {
-	sandbox.set_function("dofile", &LuaSandbox::dofile, this);
-	sandbox["require"] = sandbox["dofile"];
+	sandbox.set_function("dofile", &LuaSandbox::dofileReplace, this);
+	sandbox.set_function("require", &LuaSandbox::requireReplace, this);
 }
 
 void LuaSandbox::loadSafePrint()
 {
 	runtime->require(sol::lib::base);
-	sandbox.set_function("print", &LuaSandbox::print, this);
+	sandbox.set_function("print", &LuaSandbox::printReplace, this);
 }
 
 auto LuaSandbox::checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>
@@ -297,7 +314,7 @@ auto LuaSandbox::toScriptPath(const std::string &fileName) const -> fs::path
 	return scriptPath.lexically_normal();
 }
 
-void LuaSandbox::print(sol::variadic_args args)
+void LuaSandbox::printReplace(sol::variadic_args args)
 {
 	std::string result;
 	for (auto &&arg : args) {

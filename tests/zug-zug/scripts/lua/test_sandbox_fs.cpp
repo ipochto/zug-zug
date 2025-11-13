@@ -230,3 +230,93 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.")
 		CHECK(sandbox["after"] == 13);
 	}
 }
+
+TEST_CASE("LuaRuntime sandbox using 'require' to load files and standard libs: Lua side.")
+{
+	LuaRuntime lua;
+
+	const auto tmpDir = TempDir();
+	const auto wrkDir = fs::absolute(tmpDir.path / "scripts");
+	fs::create_directories(wrkDir / "modules");
+
+	REQUIRE(createScriptFile(wrkDir / "script.lua", files::script));
+	REQUIRE(createScriptFile(wrkDir / "../forbidden.lua", files::script));
+	REQUIRE(createScriptFile(wrkDir / "modules/module.lua", files::module));
+
+	SUBCASE("File exists, path is allowed.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(result = require("script.lua"))");
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"] == std::string("foo"));
+		CHECK(sandbox["bar"] == 42);
+	}
+
+	SUBCASE("File exists, path is allowed but messy")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(result = require("../scripts/./script.lua"))");
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"] == std::string("foo"));
+		CHECK(sandbox["bar"] == 42);
+	}
+
+	SUBCASE("File does not exist, path is allowed.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(result = require("non-existent.lua"))");
+		CHECK(sandbox["result"] == sol::nil);
+	}
+
+	SUBCASE("File exists, path is forbidden.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(result = require("../forbidden.lua"))");
+		CHECK(sandbox["result"] == sol::nil);
+	}
+
+	SUBCASE("Load existed script file as a module.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(
+			require("script.lua")
+			barSetter = require("modules/module.lua")
+			before = bar;
+			barSetter(13)
+			after = bar
+		)");
+		CHECK(sandbox["before"] == 42);
+		CHECK(sandbox["after"] == 13);
+	}
+
+	SUBCASE("Load library as module")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(
+			math = require("math")
+			require ("string")
+			maxValue = math.max(10, 15, 9)
+			stringLen = string.len("foobar")
+		)");
+		CHECK(sandbox["maxValue"] == 15);
+		CHECK(sandbox["stringLen"] == 6);
+	}
+
+	SUBCASE("Load forbidden library as module")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Core, wrkDir, {wrkDir});
+
+		sandbox.run(R"(
+			math = require("math")
+			require ("string")
+		)");
+		CHECK_FALSE(sandbox["math"].valid());
+		CHECK_FALSE(sandbox["string"].valid());
+	}
+}

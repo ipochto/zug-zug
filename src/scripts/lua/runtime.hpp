@@ -109,10 +109,13 @@ private:
 	{
 		return fs_utils::startsWith(scriptFile, allowedScriptPaths);
 	}
-	auto dofile(sol::stack_object fileName) -> sol::protected_function_result;
+
+	auto dofileReplace(sol::stack_object fileName) -> sol::protected_function_result;
+	auto requireReplace(sol::stack_object target) -> sol::protected_function_result;
+	void printReplace(sol::variadic_args args);
+
 	void loadSafeExternalScriptFilesRoutine();
 	void loadSafePrint();
-	void print(sol::variadic_args args);
 
 private:
 	LuaRuntime *runtime = {nullptr};

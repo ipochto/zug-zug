@@ -191,9 +191,12 @@ TEST_CASE("Multiple LuaRuntime sandboxes on the single LuaState")
 	CHECK_EQ(complete["name"].get<std::string>(), "complete");
 }
 
+//----------------------------------------------
+// Not a tests, just some checks.
+// Remove them then
+
 TEST_CASE("Multiple LuaRuntime sandboxes on the single LuaState")
 {
-
 	LuaRuntime lua;
 	auto sandboxes = std::map<std::string, LuaSandbox>();
 
@@ -218,5 +221,4 @@ TEST_CASE("Multiple LuaRuntime sandboxes on the single LuaState")
 		sandbox["print"] = lua.state["print"];
 		sandbox.run(whoAmI);
 	}
-
 }
