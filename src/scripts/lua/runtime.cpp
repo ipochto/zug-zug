@@ -55,21 +55,21 @@ namespace lua
 			std::string_view name;
 		};
 		// clang-format off
-		constexpr auto libsNames = std::array {
-			LibName{sol::lib::base,      "base"},
-			LibName{sol::lib::bit32,     "bit32"}, // Lua 5.2+
-			LibName{sol::lib::coroutine, "coroutine"},
-			LibName{sol::lib::debug,     "debug"},
-			LibName{sol::lib::ffi,       "ffi"}, // LuaJIT only
-			LibName{sol::lib::io,        "io"},
-			LibName{sol::lib::jit,       "jit"}, // LuaJIT only
-			LibName{sol::lib::math,      "math"},
-			LibName{sol::lib::os,        "os"},
-			LibName{sol::lib::package,   "package"},
-			LibName{sol::lib::string,    "string"},
-			LibName{sol::lib::table,     "table"},
-			LibName{sol::lib::utf8,      "utf8"} // Lua 5.3+
-		};
+		constexpr auto libsNames = std::to_array<LibName> ({
+			{sol::lib::base,      "base"},
+			{sol::lib::bit32,     "bit32"}, // Lua 5.2+
+			{sol::lib::coroutine, "coroutine"},
+			{sol::lib::debug,     "debug"},
+			{sol::lib::ffi,       "ffi"}, // LuaJIT only
+			{sol::lib::io,        "io"},
+			{sol::lib::jit,       "jit"}, // LuaJIT only
+			{sol::lib::math,      "math"},
+			{sol::lib::os,        "os"},
+			{sol::lib::package,   "package"},
+			{sol::lib::string,    "string"},
+			{sol::lib::table,     "table"},
+			{sol::lib::utf8,      "utf8"} // Lua 5.3+
+		});
 		// clang-format on
 	} // namespace details
 
