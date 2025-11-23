@@ -28,8 +28,9 @@ set(engine_headers
     src/scripts/lua/runtime.hpp
     src/scripts/lua/sol2.hpp
 
-    src/utils/optional_ref.hpp
+    src/utils/enum_set.hpp
     src/utils/filesystem.hpp
+    src/utils/optional_ref.hpp
 
     src/zug-zug/zug-zug.hpp
 )

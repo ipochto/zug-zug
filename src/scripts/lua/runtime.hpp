@@ -1,18 +1,18 @@
 #pragma once
 
 #include "lua/sol2.hpp"
+#include "utils/enum_set.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/optional_ref.hpp"
 
 #include <map>
-#include <set>
 #include <string_view>
 #include <vector>
 
 template <typename T>
 concept SolLibContainer =
-	std::ranges::range<T>
-	&& std::same_as<std::remove_cvref_t<std::ranges::range_value_t<T>>, sol::lib>;
+	std::ranges::range<T> 
+	&& std::same_as<std::ranges::range_value_t<T>, sol::lib>;
 
 class LuaRuntime
 {
@@ -36,7 +36,7 @@ public:
 	}
 
 private:
-	std::set<sol::lib> loadedLibs;
+	enum_set<sol::lib> loadedLibs;
 };
 
 class LuaSandbox
@@ -93,7 +93,7 @@ private:
 
 	void loadLibs(const SolLibContainer auto &libs)
 	{
-		for (const auto &lib : libs) {
+		for (const auto lib : libs) {
 			loadLib(lib);
 		}
 	}
@@ -127,7 +127,7 @@ private:
 							// If empty, loading external scripts is prohibited.
 	Paths allowedScriptPaths{};
 
-	std::set<sol::lib> loadedLibs;
+	enum_set<sol::lib> loadedLibs;
 
 	static const SandboxPresets sandboxPresets;
 	static const LibsSandboxingRulesMap libsSandboxingRules;
