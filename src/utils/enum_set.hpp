@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <iterator>
 #include <type_traits>
 
 template <typename T>
@@ -12,21 +13,24 @@ concept CountedEnum =
 	std::is_enum_v<T>
 	&& (requires { std::remove_cv_t<T>::Count; } || requires { std::remove_cv_t<T>::count; });
 
-template <CountedEnum Enum>
-consteval size_t enumSize()
+template <CountedEnum Enum, typename Enum_ut = std::underlying_type_t<Enum>>
+consteval Enum_ut enumSize()
 {
-	if constexpr (requires { std::remove_cv_t<Enum>::Count; }) {
-		return static_cast<size_t>(std::remove_cv_t<Enum>::Count);
+	using RawEnum = std::remove_cv_t<Enum>;
+
+	if constexpr (requires { RawEnum::Count; }) {
+		return static_cast<Enum_ut>(RawEnum::Count);
 	} else {
-		return static_cast<size_t>(std::remove_cv_t<Enum>::count);
+		return static_cast<Enum_ut>(RawEnum::count);
 	}
 }
 
-template <CountedEnum Enum>
+template <CountedEnum Enum, typename Enum_ut = std::underlying_type_t<Enum>>
 class enum_set
 {
 public:
 	using mask_t = uint64_t;
+	static constexpr Enum_ut cMaxCapacity = 64;
 
 	constexpr enum_set() noexcept = default;
 
@@ -46,9 +50,23 @@ public:
 	constexpr void erase(Enum e) noexcept { bits &= ~bit(e); }
 	constexpr void clear() noexcept { bits = 0; }
 
-	constexpr bool contains(Enum e) const noexcept { return bits & bit(e); }
-	constexpr bool empty() const noexcept { return bits == 0; }
-	constexpr size_t size() const noexcept { return std::popcount(bits); }
+	[[nodiscard]]
+	constexpr bool contains(Enum e) const noexcept
+	{
+		return bits & bit(e);
+	}
+
+	[[nodiscard]]
+	constexpr bool empty() const noexcept
+	{
+		return bits == 0;
+	}
+
+	[[nodiscard]]
+	constexpr size_t size() const noexcept
+	{
+		return std::popcount(bits);
+	}
 
 	struct iterator
 	{
@@ -58,7 +76,7 @@ public:
 		using iterator_category = std::input_iterator_tag;
 
 		mask_t rest = 0;
-		size_t idx = N;
+		Enum_ut idx = N;
 
 		constexpr iterator() noexcept = default;
 
@@ -98,15 +116,27 @@ public:
 	constexpr iterator end() const noexcept { return iterator(bits, /*end=*/true); }
 
 private:
-	static constexpr size_t to_index(Enum e) noexcept { return static_cast<size_t>(e); }
+	[[nodiscard]]
+	static constexpr Enum_ut to_index(Enum e) noexcept
+	{
+		return static_cast<Enum_ut>(e);
+	}
 
-	static constexpr Enum to_enum(size_t idx) noexcept { return static_cast<Enum>(idx); }
+	[[nodiscard]]
+	static constexpr Enum to_enum(Enum_ut idx) noexcept
+	{
+		return static_cast<Enum>(idx);
+	}
 
-	static constexpr mask_t bit(Enum e) noexcept { return mask_t(1) << to_index(e); }
+	[[nodiscard]]
+	static constexpr mask_t bit(Enum e) noexcept
+	{
+		return mask_t(1) << to_index(e);
+	}
 
 private:
-	static constexpr size_t N = enumSize<Enum>();
-	static_assert(N <= 64, "enum_set supports up to 64 values");
+	static constexpr Enum_ut N = enumSize<Enum>();
+	static_assert(N <= cMaxCapacity, "enum_set supports up to 64 values");
 
 	mask_t bits = 0;
 };
