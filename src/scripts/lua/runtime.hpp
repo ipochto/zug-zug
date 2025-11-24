@@ -81,13 +81,14 @@ private:
 	struct LibSymbolsRules
 	{
 		bool allowedAllExceptRestricted{false};
-		LibNames allowed{}; // This will be ignored if allowedAllExceptRestricted is set
-		LibNames restricted{};
+		LibNames allowed {}; // This will be ignored if allowedAllExceptRestricted is set
+		LibNames restricted {};
 	};
 
 	using LibsSandboxingRulesMap = std::map<sol::lib, LibSymbolsRules>;
 
-	auto checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>;
+	[[nodiscard]]
+	static auto checkRulesFor(sol::lib lib) noexcept -> opt_cref<LibSymbolsRules>;
 
 	bool loadLib(sol::lib lib);
 
@@ -122,10 +123,10 @@ private:
 	sol::environment sandbox;
 
 	Presets preset{Presets::Core};
-	fs::path scriptsRoot{}; // Absolute, lexically normalized path.
+	fs::path scriptsRoot;	// Absolute, lexically normalized path.
 							// Relative paths to script files are resolved from this location.
 							// If empty, loading external scripts is prohibited.
-	Paths allowedScriptPaths{};
+	Paths allowedScriptPaths;
 
 	enum_set<sol::lib> loadedLibs;
 
@@ -145,7 +146,7 @@ namespace lua
 	constexpr auto libLookupName(sol::lib lib) -> std::string_view;
 
 	[[nodiscard]]
-	auto toString(sol::object obj) -> std::string;
+	auto toString(const sol::object &obj) -> std::string;
 
 	[[nodiscard]]
 	bool isBytecode(const fs::path &file);

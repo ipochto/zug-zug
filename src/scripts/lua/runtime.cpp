@@ -78,7 +78,7 @@ namespace lua
 		auto findLib = [lib](auto &lookup) -> bool { return lookup.lib == lib; };
 		
 		const auto &libs = lua::details::libsNames;
-		if (auto it = ranges::find_if(libs, findLib); it != libs.end()) {
+		if (const auto it = ranges::find_if(libs, findLib); it != libs.end()) {
 			return it->name;
 		}
 		return std::nullopt;
@@ -89,7 +89,7 @@ namespace lua
 		auto findLibName = [libName](auto &lookup) -> bool { return lookup.name == libName; };
 
 		const auto &libs = lua::details::libsNames;
-		if (auto it = ranges::find_if(libs, findLibName); it != libs.end()) {
+		if (const auto it = ranges::find_if(libs, findLibName); it != libs.end()) {
 			return it->lib;
 		}
 		return std::nullopt;
@@ -100,7 +100,7 @@ namespace lua
 		return (lib == sol::lib::base) ? "_G" : lua::libName(lib).value_or("");
 	}
 
-	auto toString(sol::object obj) -> std::string
+	auto toString(const sol::object &obj) -> std::string
 	{
 		sol::state_view lua(obj.lua_state());
 		if (!lua["tostring"].valid()) {
@@ -132,7 +132,7 @@ namespace lua
 	{
 		bool isResultValid = callStatus == sol::call_status::ok;
 		sol::stack::push(lua, object);
-		return sol::protected_function_result(lua, -1, isResultValid ? 1 : 0, 1, callStatus);
+		return sol::protected_function_result {lua, -1, isResultValid ? 1 : 0, 1, callStatus};
 	}
 } // namespace lua
 
@@ -231,7 +231,7 @@ void LuaSandbox::loadSafePrint()
 	sandbox.set_function("print", &LuaSandbox::printReplace, this);
 }
 
-auto LuaSandbox::checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>
+auto LuaSandbox::checkRulesFor(sol::lib lib) noexcept -> opt_cref<LibSymbolsRules>
 {
 	if (const auto it = libsSandboxingRules.find(lib); it != libsSandboxingRules.end()) {
 		return it->second;
