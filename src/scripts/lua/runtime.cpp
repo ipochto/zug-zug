@@ -95,7 +95,7 @@ namespace lua
 		return std::nullopt;
 	}
 
-	constexpr auto libLookupName(sol::lib lib) -> std::string_view
+	constexpr auto libLookupName(sol::lib lib) noexcept -> std::string_view
 	{
 		return (lib == sol::lib::base) ? "_G" : lua::libName(lib).value_or("");
 	}

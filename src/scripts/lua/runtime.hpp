@@ -147,7 +147,7 @@ namespace lua
 	constexpr auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>;
 
 	[[nodiscard]]
-	constexpr auto libLookupName(sol::lib lib) -> std::string_view;
+	constexpr auto libLookupName(sol::lib lib) noexcept -> std::string_view;
 
 	[[nodiscard]]
 	auto toString(const sol::object &obj) -> std::string;
