@@ -48,9 +48,11 @@ public:
 	explicit LuaSandbox(LuaRuntime &runtime,
 						Presets preset,
 						const fs::path &root = {},
-						const Paths &allowedPaths = {})
+						const Paths &allowedPaths = {},
+						std::ostream &printOutStrm = std::cout)
 		: runtime(&runtime),
-		  preset(preset)
+		  preset(preset),
+		  printOutStrm(&printOutStrm)
 	{
 		setPathsForScripts(root, allowedPaths);
 		reset();
@@ -127,6 +129,8 @@ private:
 							// Relative paths to script files are resolved from this location.
 							// If empty, loading external scripts is prohibited.
 	Paths allowedScriptPaths;
+
+	std::ostream *printOutStrm;
 
 	enum_set<sol::lib> loadedLibs;
 

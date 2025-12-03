@@ -323,5 +323,5 @@ void LuaSandbox::printReplace(sol::variadic_args args)
 	if (!result.empty()) {
 		result.pop_back(); // remove last space separator
 	}
-	fmt::println("[lua sandbox]:> {}", result);
+	*printOutStrm << "[lua sandbox]:> " << result << "\n";
 }
