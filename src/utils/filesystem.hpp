@@ -8,7 +8,7 @@
 namespace fs = std::filesystem;
 
 template <typename T>
-concept fsPaths = 
+concept fsPaths =
 	std::ranges::range<T>
 	&& std::same_as<std::remove_cvref_t<std::ranges::range_value_t<T>>, fs::path>;
 

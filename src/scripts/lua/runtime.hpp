@@ -11,7 +11,7 @@
 
 template <typename T>
 concept SolLibContainer =
-	std::ranges::range<T> 
+	std::ranges::range<T>
 	&& std::same_as<std::ranges::range_value_t<T>, sol::lib>;
 
 class LuaRuntime
@@ -31,7 +31,7 @@ public:
 	{
 		if (!loadedLibs.contains(lib)) {
 			state.open_libraries(lib);
-			loadedLibs.insert(lib);		
+			loadedLibs.insert(lib);
 		}
 	}
 

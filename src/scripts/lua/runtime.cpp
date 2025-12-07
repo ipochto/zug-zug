@@ -76,7 +76,7 @@ namespace lua
 	constexpr auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>
 	{
 		auto findLib = [lib](auto &lookup) -> bool { return lookup.lib == lib; };
-		
+
 		const auto &libs = lua::details::libsNames;
 		if (const auto it = ranges::find_if(libs, findLib); it != libs.end()) {
 			return it->name;
