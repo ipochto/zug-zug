@@ -1,0 +1,22 @@
+Checks: >
+  bugprone-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  clang-analyzer-*,
+
+  -performance-enum-size,
+
+  -modernize-use-trailing-return-type,
+  -modernize-use-designated-initializers,
+
+  -readability-identifier-length,
+  -readability-redundant-access-specifiers,
+  -readability-redundant-member-init,
+  -readability-qualified-auto
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(?!/usr/).*'
+FormatStyle: none

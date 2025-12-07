@@ -23,6 +23,7 @@ public:
 	bool operator==(std::nullopt_t) const noexcept { return !has_value(); }
 	bool operator!=(std::nullopt_t) const noexcept { return has_value(); }
 
+	[[nodiscard]]
 	bool has_value() const noexcept { return ref.has_value(); }
 
 	void reset() noexcept { ref.reset(); }

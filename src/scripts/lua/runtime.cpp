@@ -1,40 +1,47 @@
 #include "lua/runtime.hpp"
 
+#include <array>
 #include <fmt/core.h>
 #include <fstream>
 #include <ranges>
 #include <spdlog/spdlog.h>
 
+namespace ranges = std::ranges;
+
 // clang-format off
-const LuaRuntime::SandboxPresets
-LuaRuntime::sandboxPresets{
-	{Presets::Base, {
-		sol::lib::base,
-		sol::lib::table}},
-	{Presets::Configs, {
-		sol::lib::base,
-		sol::lib::table,
-		sol::lib::string}},
+const LuaSandbox::SandboxPresets
+LuaSandbox::sandboxPresets{
+	{Presets::Core, {}},
+	{Presets::Minimal,
+		{sol::lib::base,
+		 sol::lib::table}},
+	{Presets::Complete,
+		{sol::lib::base,
+		 sol::lib::coroutine,
+		 sol::lib::math,
+		 sol::lib::os,
+		 sol::lib::string,
+		 sol::lib::table}},
 	{Presets::Custom, {}}
 };
 
-const LuaRuntime::LibsSandboxingRulesMap
-LuaRuntime::libsSandboxingRules{
-	{sol::lib::base, {
-		.allowed = {"assert", "error", "ipairs", "next", "pairs", "pcall", "select",
-					"tonumber", "tostring", "type", "unpack", "_VERSION", "xpcall"}}},
-	{sol::lib::coroutine, {
-		.allowedAllExceptRestricted = true}},
-	{sol::lib::math, {
-		.allowedAllExceptRestricted = true,
-		.restricted = {"random", "randomseed"}}},
-	{sol::lib::os, {
-		.allowed = {"clock", "date", "difftime", "time"}}},
-	{sol::lib::string, {
-		.allowedAllExceptRestricted = true,
-		.restricted = {"dump"}}},
-	{sol::lib::table, {
-		.allowedAllExceptRestricted = true}}
+const LuaSandbox::LibsSandboxingRulesMap
+LuaSandbox::libsSandboxingRules{
+	{sol::lib::base,
+		{.allowed = {"assert", "error", "ipairs", "next", "pairs", "pcall", "select",
+					 "tonumber", "tostring", "type", "unpack", "_VERSION", "xpcall"}}},
+	{sol::lib::coroutine,
+		{.allowedAllExceptRestricted = true}},
+	{sol::lib::math,
+		{.allowedAllExceptRestricted = true,
+		 .restricted = {"random", "randomseed"}}},
+	{sol::lib::os,
+		{.allowed = {"clock", "difftime", "time"}}},
+	{sol::lib::string,
+		{.allowedAllExceptRestricted = true,
+		 .restricted = {"dump"}}},
+	{sol::lib::table,
+		{.allowedAllExceptRestricted = true}}
 };
 // clang-format on
 
@@ -42,49 +49,58 @@ namespace lua
 {
 	namespace details
 	{
-		using LibsLookupTable = std::unordered_map<sol::lib, std::string_view>;
-
-		// clang-format off
-		const auto libsLookupTable = LibsLookupTable {
-			{sol::lib::base,		"base"},
-			{sol::lib::bit32,		"bit32"}, // Lua 5.2+
-			{sol::lib::coroutine,	"coroutine"},
-			{sol::lib::debug,		"debug"},
-			{sol::lib::ffi,			"ffi"}, // LuaJIT only
-			{sol::lib::io,			"io"},
-			{sol::lib::jit,			"jit"}, // LuaJIT only
-			{sol::lib::math,		"math"},
-			{sol::lib::os,			"os"},
-			{sol::lib::package,		"package"},
-			{sol::lib::string,		"string"},
-			{sol::lib::table,		"table"},
-			{sol::lib::utf8,		"utf8"} // Lua 5.3+
+		struct LibName
+		{
+			sol::lib lib;
+			std::string_view name;
 		};
+		// clang-format off
+		constexpr auto libsNames = std::to_array<LibName> ({
+			{sol::lib::base,      "base"},
+			{sol::lib::bit32,     "bit32"}, // Lua 5.2+
+			{sol::lib::coroutine, "coroutine"},
+			{sol::lib::debug,     "debug"},
+			{sol::lib::ffi,       "ffi"}, // LuaJIT only
+			{sol::lib::io,        "io"},
+			{sol::lib::jit,       "jit"}, // LuaJIT only
+			{sol::lib::math,      "math"},
+			{sol::lib::os,        "os"},
+			{sol::lib::package,   "package"},
+			{sol::lib::string,    "string"},
+			{sol::lib::table,     "table"},
+			{sol::lib::utf8,      "utf8"} // Lua 5.3+
+		});
 		// clang-format on
-
 	} // namespace details
 
-	auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>
+	constexpr auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>
 	{
-		const auto &names = lua::details::libsLookupTable;
-		const auto it = names.find(lib);
-		if (it == names.end()) {
-			return std::nullopt;
-		}
-		return it->second;
-	}
+		auto findLib = [lib](auto &lookup) -> bool { return lookup.lib == lib; };
 
-	auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>
-	{
-		for (const auto [lib, name] : lua::details::libsLookupTable) {
-			if (name == libName) {
-				return lib;
-			}
+		const auto &libs = lua::details::libsNames;
+		if (const auto it = ranges::find_if(libs, findLib); it != libs.end()) {
+			return it->name;
 		}
 		return std::nullopt;
 	}
 
-	auto toString(sol::object obj) -> std::string
+	constexpr auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>
+	{
+		auto findLibName = [libName](auto &lookup) -> bool { return lookup.name == libName; };
+
+		const auto &libs = lua::details::libsNames;
+		if (const auto it = ranges::find_if(libs, findLibName); it != libs.end()) {
+			return it->lib;
+		}
+		return std::nullopt;
+	}
+
+	constexpr auto libLookupName(sol::lib lib) noexcept -> std::string_view
+	{
+		return (lib == sol::lib::base) ? "_G" : lua::libName(lib).value_or("");
+	}
+
+	auto toString(const sol::object &obj) -> std::string
 	{
 		sol::state_view lua(obj.lua_state());
 		if (!lua["tostring"].valid()) {
@@ -106,7 +122,7 @@ namespace lua
 		if (ifs.gcount() < static_cast<std::streamsize>(header.size())) {
 			return false;
 		}
-		return std::ranges::equal(header, signature);
+		return ranges::equal(header, signature);
 	}
 
 	auto makeFnCallResult(sol::state &lua,
@@ -116,27 +132,13 @@ namespace lua
 	{
 		bool isResultValid = callStatus == sol::call_status::ok;
 		sol::stack::push(lua, object);
-		return sol::protected_function_result(lua, -1, isResultValid ? 1 : 0, 1, callStatus);
+		return sol::protected_function_result {lua, -1, isResultValid ? 1 : 0, 1, callStatus};
 	}
 } // namespace lua
 
-bool LuaState::require(sol::lib lib)
+void LuaSandbox::reset(bool doCollectGrbg /* = false */)
 {
-	if (not isLibraryLoaded(lib)) {
-		loadLibrary(lib);
-	}
-	return isLibraryLoaded(lib);
-}
-
-void LuaState::loadLibrary(sol::lib lib)
-{
-	state.open_libraries(lib);
-	loadedLibs.insert(lib);
-}
-
-void LuaRuntime::reset(bool doCollectGrbg /* = false */)
-{
-	sandbox = sol::environment(lua.state, sol::create);
+	sandbox = sol::environment(runtime->state, sol::create);
 	sandbox["_G"] = sandbox;
 
 	if (loadedLibs.empty()) {
@@ -148,21 +150,21 @@ void LuaRuntime::reset(bool doCollectGrbg /* = false */)
 	loadSafeExternalScriptFilesRoutine();
 
 	if (doCollectGrbg) {
-		lua.state.collect_garbage();
+		runtime->state.collect_garbage();
 	}
 }
 
-auto LuaRuntime::run(std::string_view script) -> sol::protected_function_result
+auto LuaSandbox::run(std::string_view script) -> sol::protected_function_result
 {
-	return lua.state.safe_script(script, sandbox);
+	return runtime->state.safe_script(script, sandbox);
 }
 
-auto LuaRuntime::runFile(const fs::path &scriptFile) -> sol::protected_function_result
+auto LuaSandbox::runFile(const fs::path &scriptFile) -> sol::protected_function_result
 {
 	auto error = [this, &scriptFile](std::string_view msg) {
 		const auto errMsg = fmt::format("{}: {}", msg, scriptFile.string());
 		spdlog::error("{}", errMsg);
-		return lua::makeFnCallResult(lua.state, errMsg, sol::call_status::file);
+		return lua::makeFnCallResult(runtime->state, errMsg, sol::call_status::file);
 	};
 
 	if (!fs::exists(scriptFile)) {
@@ -174,10 +176,10 @@ auto LuaRuntime::runFile(const fs::path &scriptFile) -> sol::protected_function_
 	if (lua::isBytecode(scriptFile)) {
 		return error("Attempting to run precompiled Lua bytecode");
 	}
-	return lua.state.safe_script_file(scriptFile.string(), sandbox);
+	return runtime->state.safe_script_file(scriptFile.string(), sandbox);
 }
 
-bool LuaRuntime::require(sol::lib lib)
+bool LuaSandbox::require(sol::lib lib)
 {
 	if (preset == Presets::Custom) {
 		return loadLib(lib);
@@ -185,9 +187,9 @@ bool LuaRuntime::require(sol::lib lib)
 	return false;
 }
 
-auto LuaRuntime::dofile(sol::stack_object fileName) -> sol::protected_function_result
+auto LuaSandbox::dofileReplace(sol::stack_object fileName) -> sol::protected_function_result
 {
-	auto nil = [this]() { return lua::makeFnCallResult(lua.state, sol::nil); };
+	auto nil = [this]() { return lua::makeFnCallResult(runtime->state, sol::nil); };
 
 	if (!fileName.is<std::string>()) {
 		return nil();
@@ -199,77 +201,87 @@ auto LuaRuntime::dofile(sol::stack_object fileName) -> sol::protected_function_r
 	return nil();
 }
 
-void LuaRuntime::loadSafeExternalScriptFilesRoutine()
+auto LuaSandbox::requireReplace(sol::stack_object target) -> sol::protected_function_result
 {
-	sandbox.set_function("dofile", &LuaRuntime::dofile, this);
-	sandbox["require"] = sandbox["dofile"];
-}
+	auto nil = [this]() { return lua::makeFnCallResult(runtime->state, sol::nil); };
 
-bool LuaRuntime::loadSafePrint()
-{
-	if (!lua.require(sol::lib::base)) {
-		return false;
+	if (!target.is<std::string>()) {
+		return nil();
 	}
-	sandbox.set_function("print", &LuaRuntime::print, this);
-	return true;
-}
-
-auto LuaRuntime::checkRulesFor(sol::lib lib) const noexcept -> opt_cref<LibSymbolsRules>
-{
-	const auto it = libsSandboxingRules.find(lib);
-	if (it == libsSandboxingRules.end()) {
-		return std::nullopt;
+	const auto possibleLibName = target.as<std::string>();
+	if (const auto lib = lua::libByName(possibleLibName); lib.has_value()) {
+		if (require(*lib)) {
+			const auto libLookupName = lua::libLookupName(*lib);
+			return lua::makeFnCallResult(runtime->state, sandbox[libLookupName]);
+		}
+		return nil();
 	}
-	return it->second;
+	return dofileReplace(target);
 }
 
-bool LuaRuntime::loadLib(sol::lib lib)
+void LuaSandbox::loadSafeExternalScriptFilesRoutine()
+{
+	sandbox.set_function("dofile", &LuaSandbox::dofileReplace, this);
+	sandbox.set_function("require", &LuaSandbox::requireReplace, this);
+}
+
+void LuaSandbox::loadSafePrint()
+{
+	runtime->require(sol::lib::base);
+	sandbox.set_function("print", &LuaSandbox::printReplace, this);
+}
+
+auto LuaSandbox::checkRulesFor(sol::lib lib) noexcept -> opt_cref<LibSymbolsRules>
+{
+	if (const auto it = libsSandboxingRules.find(lib); it != libsSandboxingRules.end()) {
+		return it->second;
+	}
+	return std::nullopt;
+}
+
+bool LuaSandbox::loadLib(sol::lib lib)
 {
 	const auto rules = checkRulesFor(lib);
 	if (!rules) {
 		return false;
 	}
-	if (!lua.require(lib)) {
-		return false;
-	}
-	addLibToSandbox(lib, *rules);
+	runtime->require(lib);
+
+	copyLibFromState(lib, *rules);
 	loadedLibs.insert(lib);
 	return true;
 }
 
-void LuaRuntime::addLibToSandbox(sol::lib lib, const LibSymbolsRules &rules)
+void LuaSandbox::copyLibFromState(sol::lib lib, const LibSymbolsRules &rules)
 {
-	const auto libName = lua::libName(lib);
-	if (!libName) {
+	const auto libLookupName = lua::libLookupName(lib);
+	if (libLookupName.empty()) {
 		return;
 	}
-	const auto libLookupName = (lib == sol::lib::base) ? "_G" : *libName;
-
-	const sol::table src = lua.state[libLookupName];
+	const sol::table src = runtime->state[libLookupName];
 	if (!src.valid()) {
 		return;
 	}
-	if (libLookupName != "_G") {
-		sandbox[libLookupName] = sol::table(lua.state, sol::create);
+	if (lib != sol::lib::base) { // The 'base' is loaded directly into '_G', which already exists
+		sandbox[libLookupName] = sol::table(runtime->state, sol::create);
 	}
-
 	sol::table dst = sandbox[libLookupName];
 
 	if (rules.allowedAllExceptRestricted) {
 		for (const auto &[name, object] : src) {
 			dst[name] = object;
 		}
+		for (const auto &name : rules.restricted) {
+			dst[name] = sol::nil;
+		}
 	} else {
 		for (const auto &name : rules.allowed) {
 			dst[name] = src[name];
 		}
 	}
-	for (const auto &name : rules.restricted) {
-		dst[name] = sol::nil;
-	}
 }
 
-void LuaRuntime::allowScriptPath(const fs::path &path)
+void LuaSandbox::allowScriptPath(const fs::path &path)
 {
 	if (scriptsRoot.empty() || path.empty()) {
 		return;
@@ -278,7 +290,7 @@ void LuaRuntime::allowScriptPath(const fs::path &path)
 	allowedScriptPaths.push_back(fs_utils::normalize(allow));
 }
 
-void LuaRuntime::setPathsForScripts(const fs::path &root, const Paths &allowed)
+void LuaSandbox::setPathsForScripts(const fs::path &root, const Paths &allowed)
 {
 	if (root.empty() || root.is_relative()) {
 		scriptsRoot.clear();
@@ -293,7 +305,7 @@ void LuaRuntime::setPathsForScripts(const fs::path &root, const Paths &allowed)
 	}
 }
 
-auto LuaRuntime::toScriptPath(const std::string &fileName) const -> fs::path
+auto LuaSandbox::toScriptPath(const std::string &fileName) const -> fs::path
 {
 	auto scriptPath = fs::path(fileName);
 	if (scriptPath.is_relative()) {
@@ -302,14 +314,15 @@ auto LuaRuntime::toScriptPath(const std::string &fileName) const -> fs::path
 	return scriptPath.lexically_normal();
 }
 
-void LuaRuntime::print(sol::variadic_args args)
+void LuaSandbox::printReplace(sol::variadic_args args)
 {
 	std::string result;
 	for (auto &&arg : args) {
-		result += lua::toString(arg) + " ";
+		result += lua::toString(arg);
+		result += " ";
 	}
 	if (!result.empty()) {
 		result.pop_back(); // remove last space separator
 	}
-	fmt::println("[lua sandbox]:> {}", result);
+	*printOutStrm << "[lua sandbox]:> " << result << "\n";
 }
