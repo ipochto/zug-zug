@@ -318,7 +318,8 @@ void LuaSandbox::printReplace(sol::variadic_args args)
 {
 	std::string result;
 	for (auto &&arg : args) {
-		result += lua::toString(arg) + " ";
+		result += lua::toString(arg);
+		result += " ";
 	}
 	if (!result.empty()) {
 		result.pop_back(); // remove last space separator
