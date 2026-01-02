@@ -46,14 +46,21 @@ namespace lua
 		{
 			size_t used {};
 			size_t limit {cDefaultMemLimit};
+
 			bool limitReached {false};
 			bool overflow {false};
+
+			[[nodiscard]]
+			bool isActivated() const { return used > 0; }
+			[[nodiscard]]
+			bool isLimitEnabled() const { return limit > 0; }
+
+			void disableLimit() { limit = 0; };
 		};
 
 		void *limitedAlloc(void *ud, void *ptr, size_t currSize, size_t newSize) noexcept;
 
 	} // namespace memory
-
 } // namespace lua
 
 class LuaRuntime
@@ -69,8 +76,8 @@ public:
 	~LuaRuntime() = default;
 
 	LuaRuntime(size_t memoryLimit)
-		: allocatorState({.limit = memoryLimit})
-		, state(sol::default_at_panic, lua::memory::limitedAlloc, &allocatorState)
+		: allocatorState({.limit = memoryLimit}),
+		  state(sol::default_at_panic, lua::memory::limitedAlloc, &allocatorState)
 	{}
 
 	LuaRuntime(const LuaRuntime &) = delete;
@@ -78,13 +85,14 @@ public:
 	LuaRuntime &operator=(const LuaRuntime &) = delete;
 	LuaRuntime &operator=(LuaRuntime &&) = delete;
 
-	void require(sol::lib lib)
-	{
-		if (!loadedLibs.contains(lib)) {
-			state.open_libraries(lib);
-			loadedLibs.insert(lib);
-		}
-	}
+	void reset();
+	bool setMemoryLimit(size_t limit);
+	void require(sol::lib lib);
+
+	[[nodiscard]]
+	auto getAllocatorState() const 
+		-> const lua::memory::LimitedAllocatorState& 
+	{ return allocatorState; }
 };
 
 class LuaSandbox

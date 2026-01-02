@@ -170,7 +170,7 @@ namespace lua
 				return nullptr;
 			}
 			const size_t newUsed = usedBase + newSize;
-			if (newUsed > allocState->limit) {
+			if (allocState->isLimitEnabled() && newUsed > allocState->limit) {
 				spdlog::error("Lua allocator: memory limit reached "
 							  "[limit: {}, used: {}, requested total: {}]",
 							  allocState->limit,
@@ -187,6 +187,36 @@ namespace lua
 		}
 	} // namespace memory
 } // namespace lua
+
+void LuaRuntime::reset()
+{
+	if (allocatorState.isActivated()) {
+		const auto currentLimit = allocatorState.limit;
+		allocatorState.disableLimit();
+
+		state = sol::state(sol::default_at_panic, lua::memory::limitedAlloc, &allocatorState);
+
+		allocatorState = {.used = allocatorState.used, .limit = currentLimit};
+	} else {
+		state = sol::state();
+	}
+}
+
+bool LuaRuntime::setMemoryLimit(size_t limit)
+{
+	if (allocatorState.isActivated()) {
+		allocatorState.limit = limit;
+	}
+	return allocatorState.isActivated();
+}
+
+void LuaRuntime::require(sol::lib lib)
+{
+	if (!loadedLibs.contains(lib)) {
+		state.open_libraries(lib);
+		loadedLibs.insert(lib);
+	}
+}
 
 void LuaSandbox::reset(bool doCollectGrbg /* = false */)
 {

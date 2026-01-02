@@ -151,3 +151,22 @@ TEST_CASE("limitedAlloc: overflow is set when usedBase + newSize overflows size_
 	CHECK(ptr == nullptr);
 	CHECK(allocState.overflow);
 }
+
+TEST_CASE("LuaRuntime + limitedAlloc: used memory reduced to initial value after runtime reset")
+{
+	LuaRuntime lua(lua::memory::cDefaultMemLimit);
+
+	auto &allocState = lua.getAllocatorState();
+	size_t initialUsed = allocState.used;
+
+	lua.state.script(R"(
+		placeHolder = {}
+		for i = 1, 32765 do
+			placeHolder[i] = "A string #" .. " to use some memory"
+		end
+	)");
+	CHECK(allocState.used > initialUsed);
+
+	lua.reset();
+	CHECK(allocState.used == initialUsed);
+}
