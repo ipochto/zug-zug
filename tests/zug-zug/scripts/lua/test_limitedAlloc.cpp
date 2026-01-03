@@ -170,3 +170,18 @@ TEST_CASE("LuaRuntime + limitedAlloc: used memory reduced to initial value after
 	lua.reset();
 	CHECK(allocState.used == initialUsed);
 }
+
+TEST_CASE("LuaSandox on LuaRuntime + limitedAlloc: script returns error if memory limit exceeded")
+{
+	LuaRuntime lua(16'384);
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal);
+
+	auto result = sandbox.run(R"(
+		placeHolder = {}
+		while true do
+			table.insert(placeHolder, 0xFFFF)
+		end
+	)");
+	CHECK_FALSE(result.valid());
+	CHECK(lua.getAllocatorState().limitReached == true);
+}
