@@ -55,7 +55,7 @@ namespace lua
 			[[nodiscard]]
 			bool isLimitEnabled() const { return limit > 0; }
 
-			void disableLimit() { limit = 0; };
+			void disableLimit() { limit = 0; }
 		};
 
 		void *limitedAlloc(void *ud, void *ptr, size_t currSize, size_t newSize) noexcept;
