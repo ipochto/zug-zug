@@ -1,6 +1,8 @@
 #pragma once
 
 #include "lua/sol2.hpp"
+#include "lua/utils.hpp"
+
 #include "utils/enum_set.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/optional_ref.hpp"
@@ -13,55 +15,6 @@ template <typename T>
 concept SolLibContainer =
 	std::ranges::range<T>
 	&& std::same_as<std::ranges::range_value_t<T>, sol::lib>;
-
-namespace lua
-{
-	[[nodiscard]]
-	constexpr auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>;
-
-	[[nodiscard]]
-	constexpr auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>;
-
-	[[nodiscard]]
-	constexpr auto libLookupName(sol::lib lib) noexcept -> std::string_view;
-
-	[[nodiscard]]
-	auto toString(const sol::object &obj) -> std::string;
-
-	[[nodiscard]]
-	bool isBytecode(const fs::path &file);
-
-	[[nodiscard]]
-	auto makeFnCallResult(sol::state &lua,
-						  const auto &object,
-						  sol::call_status callStatus = sol::call_status::ok)
-		-> sol::protected_function_result;
-
-	namespace memory
-	{
-		constexpr size_t c1MB = 1L * 1024 * 1024;
-		constexpr size_t cDefaultMemLimit = c1MB;
-
-		struct LimitedAllocatorState
-		{
-			size_t used {};
-			size_t limit {cDefaultMemLimit};
-
-			bool limitReached {false};
-			bool overflow {false};
-
-			[[nodiscard]]
-			bool isActivated() const { return used > 0; }
-			[[nodiscard]]
-			bool isLimitEnabled() const { return limit > 0; }
-
-			void disableLimit() { limit = 0; }
-		};
-
-		void *limitedAlloc(void *ud, void *ptr, size_t currSize, size_t newSize) noexcept;
-
-	} // namespace memory
-} // namespace lua
 
 class LuaRuntime
 {

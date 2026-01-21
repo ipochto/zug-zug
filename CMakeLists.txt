@@ -21,12 +21,14 @@ include(ThirdPartyDependencies)
 
 set(engine_sources
     src/scripts/lua/runtime.cpp
+    src/scripts/lua/utils.cpp
 
     src/zug-zug/zug-zug.cpp
 )
 set(engine_headers
     src/scripts/lua/runtime.hpp
     src/scripts/lua/sol2.hpp
+    src/scripts/lua/utils.hpp
 
     src/utils/enum_set.hpp
     src/utils/filesystem.hpp
