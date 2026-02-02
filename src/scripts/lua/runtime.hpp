@@ -53,6 +53,7 @@ class LuaSandbox
 public:
 	enum class Presets { Core, Minimal, Complete, Custom };
 	using Paths = std::vector<fs::path>;
+	using ResultOrErrorMsg = std::tuple<sol::object, sol::object>;
 
 	explicit LuaSandbox(LuaRuntime &runtime,
 						Presets preset,
@@ -82,7 +83,7 @@ public:
 
 	[[nodiscard]]
 	bool require(sol::lib lib);
-	void allowScriptPath(const fs::path &path);
+	bool allowScriptPath(const fs::path &path);
 
 private:
 	using LibNames = std::vector<std::string_view>;
@@ -117,13 +118,18 @@ private:
 	auto toScriptPath(const std::string &fileName) const -> fs::path;
 
 	[[nodiscard]]
-	bool isPathAllowed(const fs::path &scriptFile) const
-	{
-		return fs_utils::startsWith(scriptFile, allowedScriptPaths);
-	}
+	bool isPathAllowed(const fs::path &scriptFile) const;
 
+	[[nodiscard]]
+	auto checkIfAllowedToLoad(const fs::path &scriptFile) const
+		-> std::tuple<bool, std::string_view>;
+
+	auto loadfileReplace(sol::stack_object fileName) -> ResultOrErrorMsg;
 	auto dofileReplace(sol::stack_object fileName) -> sol::protected_function_result;
-	auto requireReplace(sol::stack_object target) -> sol::protected_function_result;
+	auto dofileSafe(sol::stack_object fileName) -> sol::variadic_results;
+	auto requireReplace(sol::stack_object target) -> sol::object;
+	auto requireFile(sol::stack_object fileName) -> ResultOrErrorMsg;
+
 	void printReplace(sol::variadic_args args);
 
 	void loadSafeExternalScriptFilesRoutine();

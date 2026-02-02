@@ -67,6 +67,12 @@ namespace files
 		bar = 42
 		return foo
 	)";
+	const auto scriptMultiReturn = R"(
+		return "first", "second"
+	)";
+	const auto scriptError = R"(
+		error("boom")
+	)";
 } // namespace files
 
 TEST_CASE("LuaRuntime sandbox runs a script file: Cpp side.")
@@ -176,6 +182,7 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.")
 	fs::create_directories(wrkDir / "modules");
 
 	REQUIRE(createScriptFile(wrkDir / "script.lua", files::script));
+	REQUIRE(createScriptFile(wrkDir / "scriptMR.lua", files::scriptMultiReturn));
 	REQUIRE(createScriptFile(wrkDir / "../forbidden.lua", files::script));
 	REQUIRE(createScriptFile(wrkDir / "modules/module.lua", files::module));
 
@@ -187,6 +194,19 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.")
 		REQUIRE(sandbox["result"].valid());
 		CHECK(sandbox["result"] == std::string("foo"));
 		CHECK(sandbox["bar"] == 42);
+	}
+
+	SUBCASE("File exists, path is allowed, multi values return")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(first, second, third = dofile("scriptMR.lua"))");
+		REQUIRE(sandbox["first"].valid());
+		CHECK(sandbox["first"] == std::string("first"));
+		REQUIRE(sandbox["second"].valid());
+		CHECK(sandbox["second"] == std::string("second"));
+		CHECK(sandbox["third"] == sol::nil);
+
 	}
 
 	SUBCASE("File exists, path is allowed but messy")
@@ -205,6 +225,7 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.")
 
 		sandbox.run(R"(result = dofile("non-existent.lua"))");
 		CHECK(sandbox["result"] == sol::nil);
+
 	}
 
 	SUBCASE("File exists, path is forbidden.")
@@ -214,24 +235,96 @@ TEST_CASE("LuaRuntime sandbox runs a script file: Lua side.")
 		sandbox.run(R"(result = dofile("../forbidden.lua"))");
 		CHECK(sandbox["result"] == sol::nil);
 	}
+}
 
-	SUBCASE("Load existed script file as a module.")
+TEST_CASE("LuaRuntime sandbox runs a script file (safe version)): Lua side.")
+{
+	LuaRuntime lua;
+
+	const auto tmpDir = TempDir();
+	const auto wrkDir = fs::absolute(tmpDir.path / "scripts");
+	fs::create_directories(wrkDir / "modules");
+
+	REQUIRE(createScriptFile(wrkDir / "script.lua", files::script));
+	REQUIRE(createScriptFile(wrkDir / "scriptMR.lua", files::scriptMultiReturn));
+	REQUIRE(createScriptFile(wrkDir / "scriptError.lua", files::scriptError));
+	REQUIRE(createScriptFile(wrkDir / "../forbidden.lua", files::script));
+	REQUIRE(createScriptFile(wrkDir / "modules/module.lua", files::module));
+
+	SUBCASE("File exists, path is allowed.")
 	{
 		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
 
-		sandbox.run(R"(
-			dofile("script.lua")
-			barSetter = require("modules/module.lua")
-			before = bar;
-			barSetter(13)
-			after = bar
-		)");
-		CHECK(sandbox["before"] == 42);
-		CHECK(sandbox["after"] == 13);
+		sandbox.run(R"(ok, result = safe_dofile("script.lua"))");
+		REQUIRE(sandbox["ok"].valid());
+		CHECK(sandbox["ok"].get<bool>() == true);
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"] == std::string("foo"));
+		CHECK(sandbox["bar"] == 42);
+	}
+
+	SUBCASE("File exists, path is allowed, multi values return")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(ok, first, second, third = safe_dofile("scriptMR.lua"))");
+		REQUIRE(sandbox["ok"].valid());
+		CHECK(sandbox["ok"].get<bool>() == true);
+		REQUIRE(sandbox["first"].valid());
+		CHECK(sandbox["first"] == std::string("first"));
+		REQUIRE(sandbox["second"].valid());
+		CHECK(sandbox["second"] == std::string("second"));
+		CHECK(sandbox["third"] == sol::nil);
+	}
+
+	SUBCASE("File exists, path is allowed, script with error.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal, wrkDir, {wrkDir});
+
+		sandbox.run(R"(ok, result = safe_dofile("scriptError.lua"))");
+		REQUIRE(sandbox["ok"].valid());
+		CHECK(sandbox["ok"].get<bool>() == false);
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"].is<std::string>());
+		
+	}
+
+	SUBCASE("File exists, path is allowed but messy")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(ok, result = safe_dofile("../scripts/./script.lua"))");
+		REQUIRE(sandbox["ok"].valid());
+		CHECK(sandbox["ok"].get<bool>() == true);
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"] == std::string("foo"));
+		CHECK(sandbox["bar"] == 42);
+	}
+
+	SUBCASE("File does not exist, path is allowed.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(ok, result = safe_dofile("non-existent.lua"))");
+		REQUIRE(sandbox["ok"].valid());
+		CHECK(sandbox["ok"].get<bool>() == false);
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"].is<std::string>());
+	}
+
+	SUBCASE("File exists, path is forbidden.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(ok, result = safe_dofile("../forbidden.lua"))");
+		REQUIRE(sandbox["ok"].valid());
+		CHECK(sandbox["ok"].get<bool>() == false);
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"].is<std::string>());
 	}
 }
 
-TEST_CASE("LuaRuntime sandbox using 'require' to load files and standard libs: Lua side.")
+TEST_CASE("LuaRuntime sandbox using 'require' to load standard libs: Lua side.")
 {
 	LuaRuntime lua;
 
@@ -242,57 +335,6 @@ TEST_CASE("LuaRuntime sandbox using 'require' to load files and standard libs: L
 	REQUIRE(createScriptFile(wrkDir / "script.lua", files::script));
 	REQUIRE(createScriptFile(wrkDir / "../forbidden.lua", files::script));
 	REQUIRE(createScriptFile(wrkDir / "modules/module.lua", files::module));
-
-	SUBCASE("File exists, path is allowed.")
-	{
-		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
-
-		sandbox.run(R"(result = require("script.lua"))");
-		REQUIRE(sandbox["result"].valid());
-		CHECK(sandbox["result"] == std::string("foo"));
-		CHECK(sandbox["bar"] == 42);
-	}
-
-	SUBCASE("File exists, path is allowed but messy")
-	{
-		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
-
-		sandbox.run(R"(result = require("../scripts/./script.lua"))");
-		REQUIRE(sandbox["result"].valid());
-		CHECK(sandbox["result"] == std::string("foo"));
-		CHECK(sandbox["bar"] == 42);
-	}
-
-	SUBCASE("File does not exist, path is allowed.")
-	{
-		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
-
-		sandbox.run(R"(result = require("non-existent.lua"))");
-		CHECK(sandbox["result"] == sol::nil);
-	}
-
-	SUBCASE("File exists, path is forbidden.")
-	{
-		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
-
-		sandbox.run(R"(result = require("../forbidden.lua"))");
-		CHECK(sandbox["result"] == sol::nil);
-	}
-
-	SUBCASE("Load existed script file as a module.")
-	{
-		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
-
-		sandbox.run(R"(
-			require("script.lua")
-			barSetter = require("modules/module.lua")
-			before = bar;
-			barSetter(13)
-			after = bar
-		)");
-		CHECK(sandbox["before"] == 42);
-		CHECK(sandbox["after"] == 13);
-	}
 
 	SUBCASE("Load library as module")
 	{
@@ -318,5 +360,84 @@ TEST_CASE("LuaRuntime sandbox using 'require' to load files and standard libs: L
 		)");
 		CHECK_FALSE(sandbox["math"].valid());
 		CHECK_FALSE(sandbox["string"].valid());
+	}
+}
+
+TEST_CASE("LuaRuntime sandbox using 'require_file' to load files as modules: Lua side.")
+{
+	LuaRuntime lua;
+
+	const auto tmpDir = TempDir();
+	const auto wrkDir = fs::absolute(tmpDir.path / "scripts");
+	fs::create_directories(wrkDir / "modules");
+
+	REQUIRE(createScriptFile(wrkDir / "script.lua", files::script));
+	REQUIRE(createScriptFile(wrkDir / "scriptMR.lua", files::scriptMultiReturn));
+	REQUIRE(createScriptFile(wrkDir / "../forbidden.lua", files::script));
+	REQUIRE(createScriptFile(wrkDir / "modules/module.lua", files::module));
+
+	SUBCASE("File exists, path is allowed.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(result = require_file("script.lua"))");
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"] == std::string("foo"));
+		CHECK(sandbox["bar"] == 42);
+	}
+
+	SUBCASE("File exists, path is allowed, but the script returns multiple values")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(first, second = require_file("scriptMR.lua"))");
+		REQUIRE(sandbox["first"].valid());
+		CHECK(sandbox["first"] == std::string("first"));
+		CHECK(sandbox["second"] == sol::nil);
+	}
+
+	SUBCASE("File exists, path is allowed but messy")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(result = require_file("../scripts/./script.lua"))");
+		REQUIRE(sandbox["result"].valid());
+		CHECK(sandbox["result"] == std::string("foo"));
+		CHECK(sandbox["bar"] == 42);
+	}
+
+	SUBCASE("File does not exist, path is allowed.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(result, err = require_file("non-existent.lua"))");
+		CHECK(sandbox["result"] == sol::nil);
+		REQUIRE(sandbox["err"].valid());
+		CHECK(sandbox["err"].is<std::string>());
+	}
+
+	SUBCASE("File exists, path is forbidden.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(result, err = require_file("../forbidden.lua"))");
+		CHECK(sandbox["result"] == sol::nil);
+		REQUIRE(sandbox["err"].valid());
+		CHECK(sandbox["err"].is<std::string>());
+	}
+
+	SUBCASE("Load existed script file as a module.")
+	{
+		LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom, wrkDir, {wrkDir});
+
+		sandbox.run(R"(
+			require_file("script.lua")
+			barSetter, err = require_file("modules/module.lua")
+			before = bar;
+			barSetter(13)
+			after = bar
+		)");
+		CHECK(sandbox["before"] == 42);
+		CHECK(sandbox["after"] == 13);
 	}
 }
