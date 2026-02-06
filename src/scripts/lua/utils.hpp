@@ -87,7 +87,7 @@ namespace lua
 
 	[[nodiscard]]
 	bool isBytecode(const fs::path &file);
-
+/*-----------------------------------------------------------------------------------------------*/
 	namespace memory
 	{
 		using Allocator = lua_Alloc;
@@ -113,7 +113,7 @@ namespace lua
 
 		void *limitedAlloc(void *ud, void *ptr, size_t currSize, size_t newSize) noexcept;
 	} // namespace memory
-
+/*-----------------------------------------------------------------------------------------------*/
 	namespace registry
 	{
 		using KeySrc = uint8_t;
@@ -142,9 +142,8 @@ namespace lua
 			registry[asKey(keySrc)]
 				= sol::lightuserdata_value{static_cast<void*>(ctx)};
 		}
-
 	} // namespace registry
-
+/*-----------------------------------------------------------------------------------------------*/
 	namespace timeoutGuard
 	{
 		using namespace std::chrono_literals;
@@ -154,7 +153,7 @@ namespace lua
 
 		constexpr auto kDefaultCheckPeriod {10'000};
 		constexpr auto kDefaultLimit {5ms};
-
+/*-----------------------------------------------------------------------------------------------*/
 		struct HookStatus
 		{
 			InstructionsCount checkPeriod {0};
@@ -167,7 +166,7 @@ namespace lua
 			[[nodiscard]]
 			bool installed() const noexcept { return func != nullptr; }
 		};
-
+/*-----------------------------------------------------------------------------------------------*/
 		void defaultHook(lua_State *L, lua_Debug* /*ar*/);
 
 		void setHook(sol::state_view lua,
@@ -175,7 +174,7 @@ namespace lua
 					 lua_Hook func = lua::timeoutGuard::defaultHook) noexcept;
 
 		void removeHook(sol::state_view lua) noexcept;
-
+/*-----------------------------------------------------------------------------------------------*/
 		struct HookContext
 		{
 			clock::time_point deadline {};
@@ -196,8 +195,7 @@ namespace lua
 
 			void registerIn(sol::state_view lua) { registry::set(lua, kLuaRegistryKey, this); }
 		};
-
-
+/*-----------------------------------------------------------------------------------------------*/
 		class Watchdog
 		{
 		private:
@@ -229,7 +227,7 @@ namespace lua
 			[[nodiscard]]
 			bool isLuaStateChanged(sol::state_view check) const noexcept{ return lua != check.lua_state(); }
 		};
-
+/*-----------------------------------------------------------------------------------------------*/
 		struct GuardedScope
 		{
 			Watchdog *watchdog;
@@ -268,11 +266,7 @@ namespace lua
 			~GuardedScope() { onDestroy(); }
 
 			[[nodiscard]]
-			bool armed() const
-			{
-				return watchdog != nullptr;
-			}
+			bool armed() const { return watchdog != nullptr; }
 		};
-
 	} // namespace timeoutGuard
 } // namespace lua

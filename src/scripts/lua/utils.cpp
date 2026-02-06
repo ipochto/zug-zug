@@ -31,7 +31,7 @@ namespace lua
 		}
 		return ranges::equal(header, signature);
 	}
-
+/*-----------------------------------------------------------------------------------------------*/
 	namespace memory
 	{
 		void *limitedAlloc(void *ud, void *ptr, size_t currSize, size_t newSize) noexcept
@@ -83,7 +83,7 @@ namespace lua
 			return newPtr;
 		}
 	} // namespace memory
-
+/*-----------------------------------------------------------------------------------------------*/
 	namespace timeoutGuard
 	{
 		void defaultHook(lua_State *L, lua_Debug* /*ar*/)
@@ -108,7 +108,7 @@ namespace lua
 		{
 			lua_sethook(lua.lua_state(), nullptr, 0, 0);
 		}
-
+/*-----------------------------------------------------------------------------------------------*/
 		void Watchdog::start(time::milliseconds limit) noexcept
 		{
 			if (!hookStatus.installed()) {
@@ -134,8 +134,7 @@ namespace lua
 			setHook(lua, checkPeriod, hook);
 			hookStatus = HookStatus{checkPeriod, hook};
 		}
-
-
+/*-----------------------------------------------------------------------------------------------*/
 		void GuardedScope::onDestroy() noexcept
 		{
 			if (armed()) {
@@ -156,6 +155,5 @@ namespace lua
 			}
 			return *this;
 		}
-
 	} // namespace timeoutGuard
 } // namespace lua
