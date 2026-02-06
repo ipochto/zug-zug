@@ -88,3 +88,21 @@ TEST_CASE("timeoutGuard: Watchdog reassigns to new lua_State")
         CHECK(consist(err.what(), "Script timed out"));
 	}
 }
+
+
+TEST_CASE("timeoutGuard: GuardedScope stops infinite loop executed from sandbox")
+{
+	LuaRuntime lua;
+	LuaSandbox sandbox(lua, LuaSandbox::Presets::Custom);
+
+	{
+		auto scopeGuard = sandbox.makeTimeoutGuardedScope(5ms);
+
+		auto result = sandbox.run(R"(
+			while true do end
+		)");
+        REQUIRE_FALSE(result.valid());
+        const sol::error err = result;
+        CHECK(consist(err.what(), "Script timed out"));
+	}
+}
