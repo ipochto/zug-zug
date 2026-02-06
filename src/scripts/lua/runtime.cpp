@@ -46,12 +46,13 @@ void LuaRuntime::reset()
 		const auto currentLimit = allocatorState.limit;
 		allocatorState.disableLimit();
 
-		state = sol::state(sol::default_at_panic, lua::memory::limitedAlloc, &allocatorState);
+		state = sol::state(sol::default_at_panic, allocatorFn, &allocatorState);
 
 		allocatorState = {.used = allocatorState.used, .limit = currentLimit};
 	} else {
 		state = sol::state();
 	}
+	timeoutGuard.assign(state);
 }
 
 bool LuaRuntime::setMemoryLimit(size_t limit)
@@ -69,6 +70,8 @@ void LuaRuntime::require(sol::lib lib)
 		loadedLibs.insert(lib);
 	}
 }
+
+/*-----------------------------------------------------------------------------------------------*/
 
 void LuaSandbox::reset(bool doCollectGrbg /* = false */)
 {
@@ -174,7 +177,7 @@ auto LuaSandbox::dofileReplace(sol::stack_object fileName)
 	auto scriptResult = runFile(filePath);
 	if (!scriptResult.valid()) {
 		sol::error err = scriptResult;
-		spdlog::error(R"(Unable to execute dofile("{}"). Error: "{}")", 
+		spdlog::error(R"(Unable to execute dofile("{}"). Error: "{}")",
 					  fileName.as<std::string>(),
 					  err.what());
 		return {};
@@ -189,11 +192,11 @@ auto LuaSandbox::dofileSafe(sol::stack_object fileName)
 
 	auto result = sol::variadic_results {};
 
-    auto makeError = [&](const std::string &msgError) {
-        result.push_back (sol::make_object(lua, false));
-        result.push_back(sol::make_object(lua, msgError));
-        return result;
-    };
+	auto makeError = [&](const std::string &msgError) {
+		result.push_back (sol::make_object(lua, false));
+		result.push_back(sol::make_object(lua, msgError));
+		return result;
+	};
 
 	auto [chunk, error] = loadfileReplace(fileName);
 	if (!chunk.valid()) {
@@ -247,7 +250,7 @@ auto LuaSandbox::requireReplace(sol::stack_object target)
 	const auto possibleLibName = target.as<std::string>();
 	const auto lib = lua::libByName(possibleLibName);
 	if (!lib) {
-		spdlog::error(R"(require("{}"): library not found.)", possibleLibName);		
+		spdlog::error(R"(require("{}"): library not found.)", possibleLibName);
 		return sol::nil;
 	}
 	if (!require(*lib)) {

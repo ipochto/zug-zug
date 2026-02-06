@@ -19,18 +19,30 @@ concept SolLibContainer =
 class LuaRuntime
 {
 private:
-	enum_set<sol::lib> loadedLibs;
-	lua::memory::LimitedAllocatorState allocatorState;
+	lua::memory::LimitedAllocatorState allocatorState{};
+	lua::memory::Allocator allocatorFn{nullptr};
 
 public:
 	sol::state state;
 
-	LuaRuntime() = default;
+private:
+	enum_set<sol::lib> loadedLibs;
+	lua::timeoutGuard::Watchdog timeoutGuard;
+
+
+public:
+	LuaRuntime()
+		: state{},
+		  timeoutGuard(state)
+	{}
+
 	~LuaRuntime() = default;
 
-	LuaRuntime(size_t memoryLimit)
+	LuaRuntime(size_t memoryLimit, lua::memory::Allocator fn = lua::memory::limitedAlloc)
 		: allocatorState({.limit = memoryLimit}),
-		  state(sol::default_at_panic, lua::memory::limitedAlloc, &allocatorState)
+		  allocatorFn(fn),
+		  state(sol::default_at_panic, fn, &allocatorState),
+		  timeoutGuard(state)
 	{}
 
 	LuaRuntime(const LuaRuntime &) = delete;
@@ -43,9 +55,17 @@ public:
 	void require(sol::lib lib);
 
 	[[nodiscard]]
-	auto getAllocatorState() const 
-		-> const lua::memory::LimitedAllocatorState& 
-	{ return allocatorState; }
+	auto getAllocatorState() const -> const lua::memory::LimitedAllocatorState &
+	{
+		return allocatorState;
+	}
+
+	[[nodiscard]]
+	auto makeTimeoutGuardedScope(std::chrono::milliseconds limit)
+		-> lua::timeoutGuard::GuardedScope
+	{
+		return lua::timeoutGuard::GuardedScope{timeoutGuard, limit};
+	}
 };
 
 class LuaSandbox
@@ -84,6 +104,13 @@ public:
 	[[nodiscard]]
 	bool require(sol::lib lib);
 	bool allowScriptPath(const fs::path &path);
+
+	[[nodiscard]]
+	auto makeTimeoutGuardedScope(std::chrono::milliseconds limit)
+		-> lua::timeoutGuard::GuardedScope
+	{
+		return runtime->makeTimeoutGuardedScope(limit);
+	}
 
 private:
 	using LibNames = std::vector<std::string_view>;
