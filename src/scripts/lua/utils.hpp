@@ -3,6 +3,7 @@
 #include "lua/sol2.hpp"
 #include "utils/filesystem.hpp"
 
+#include <chrono>
 #include <optional>
 #include <ranges>
 #include <string_view>
@@ -89,6 +90,8 @@ namespace lua
 
 	namespace memory
 	{
+		using Allocator = lua_Alloc;
+
 		constexpr size_t c1MB = 1L * 1024 * 1024;
 		constexpr size_t cDefaultMemLimit = c1MB;
 
@@ -111,48 +114,165 @@ namespace lua
 		void *limitedAlloc(void *ud, void *ptr, size_t currSize, size_t newSize) noexcept;
 	} // namespace memory
 
+	namespace registry
+	{
+		using KeySrc = uint8_t;
+
+		inline auto asKey(KeySrc &keySrc) noexcept
+			-> sol::lightuserdata_value
+		{
+			return sol::lightuserdata_value{static_cast<void *>(&keySrc)};
+		}
+
+		template <typename T, typename ReturnT = std::remove_pointer_t<T>>
+		ReturnT* get(sol::state_view lua, KeySrc &keySrc) noexcept
+		{
+			auto registry = lua.registry();
+
+			auto data = registry.get_or(asKey(keySrc),
+										sol::lightuserdata_value{nullptr});
+
+			return static_cast<ReturnT*>(data.value);
+		};
+
+		template <typename T>
+		void set(sol::state_view lua, KeySrc &keySrc, T *ctx)
+		{
+			auto registry = lua.registry();
+			registry[asKey(keySrc)]
+				= sol::lightuserdata_value{static_cast<void*>(ctx)};
+		}
+
+	} // namespace registry
+
 	namespace timeoutGuard
 	{
+		using namespace std::chrono_literals;
 		namespace time = std::chrono;
+		using clock = time::steady_clock;
+		using InstructionsCount = int;
 
-		constexpr int kDefaultInstructionsCount = 10'000;
+		constexpr auto kDefaultCheckPeriod {10'000};
+		constexpr auto kDefaultLimit {5ms};
 
-		struct WatchdogState
+		struct HookStatus
 		{
+			InstructionsCount checkPeriod {0};
+			lua_Hook func {nullptr};
+
 			// Value is unused; its address is used as a unique key in the Lua registry
-			inline static uint8_t kRegistryKey {};
-			static auto registryKey() noexcept -> sol::lightuserdata_value
-			{
-				return sol::lightuserdata_value{ static_cast<void*>(&WatchdogState::kRegistryKey) };
-			}
-			
-			using clock = time::steady_clock;
+			inline static registry::KeySrc kLuaRegistryKey {};
+			void registerIn(sol::state_view lua) { registry::set(lua, kLuaRegistryKey, this); }
 
+			[[nodiscard]]
+			bool installed() const noexcept { return func != nullptr; }
+		};
+
+		void defaultHook(lua_State *L, lua_Debug* /*ar*/);
+
+		void setHook(sol::state_view lua,
+					 InstructionsCount checkPeriod,
+					 lua_Hook func = lua::timeoutGuard::defaultHook) noexcept;
+
+		void removeHook(sol::state_view lua) noexcept;
+
+		struct HookContext
+		{
 			clock::time_point deadline {};
-			time::milliseconds limit {};
-
 			bool enabled {false};
 
-			WatchdogState() = default;
-			explicit WatchdogState(time::milliseconds limit) noexcept 
-				: limit(limit)
-			{}
-
-			void enable() noexcept { enabled = true; }
-			void disable() noexcept { enabled = false; }
-			void start() noexcept
-			{ 
-				enable();
+			void start(time::milliseconds limit) noexcept
+			{
+				enabled = true;
 				deadline = clock::now() + limit;
 			}
+			void stop() noexcept { enabled = false; }
 
 			[[nodiscard]]
 			bool isTimedOut() const noexcept { return enabled && clock::now() > deadline; }
-		};
-		void placeWatchdogState(lua_State *L, WatchdogState *ctx);
-		auto getWatchdogState(lua_State *L) -> WatchdogState*;
 
-		void watchdog(lua_State *L, lua_Debug* /*ar*/);
+			// Value is unused; its address is used as a unique key in the Lua registry
+			inline static registry::KeySrc kLuaRegistryKey {};
+
+			void registerIn(sol::state_view lua) { registry::set(lua, kLuaRegistryKey, this); }
+		};
+
+
+		class Watchdog
+		{
+		private:
+			HookStatus hookStatus{};
+			HookContext context{};
+			lua_State *lua{nullptr};
+
+		public:
+			Watchdog(sol::state_view lua) { assign(lua); };
+
+			void start(time::milliseconds limit) noexcept;
+			void stop() noexcept { context.stop(); }
+
+			[[nodiscard]]
+			bool isTimedOut() const noexcept { return context.isTimedOut(); }
+
+			void assign(sol::state_view newLua);
+
+			void arm(InstructionsCount checkPeriod = kDefaultCheckPeriod,
+					 lua_Hook hook = defaultHook) noexcept;
+			void disarm() noexcept { removeHook(lua); hookStatus = HookStatus{}; }
+
+			[[nodiscard]]
+			auto getPeriod() const noexcept -> InstructionsCount { return hookStatus.checkPeriod; }
+
+			[[nodiscard]]
+			bool armed() const noexcept { return lua != nullptr && hookStatus.func != nullptr; }
+
+			[[nodiscard]]
+			bool isLuaStateChanged(sol::state_view check) const noexcept{ return lua != check.lua_state(); }
+		};
+
+		struct GuardedScope
+		{
+			Watchdog *watchdog;
+			InstructionsCount prevPeriod{0};
+
+			GuardedScope(Watchdog &watchdog, time::milliseconds limit) noexcept
+				: watchdog(&watchdog)
+			{
+				watchdog.start(limit);
+			}
+
+			GuardedScope(Watchdog &watchdog,
+						 time::milliseconds limit,
+						 InstructionsCount overridePeriod) noexcept
+				: watchdog(&watchdog),
+				  prevPeriod(watchdog.getPeriod())
+			{
+				watchdog.arm(overridePeriod);
+				watchdog.start(limit);
+			}
+
+			GuardedScope(const GuardedScope &) = delete;
+			GuardedScope &operator=(const GuardedScope &) = delete;
+
+			void disarm() noexcept { watchdog = nullptr; prevPeriod = 0; }
+			void onDestroy() noexcept;
+
+			GuardedScope(GuardedScope &&other) noexcept
+				: watchdog(other.watchdog),
+				  prevPeriod(other.prevPeriod)
+			{
+				other.disarm();
+			}
+			GuardedScope &operator=(GuardedScope &&other) noexcept;
+
+			~GuardedScope() { onDestroy(); }
+
+			[[nodiscard]]
+			bool armed() const
+			{
+				return watchdog != nullptr;
+			}
+		};
 
 	} // namespace timeoutGuard
 } // namespace lua

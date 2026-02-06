@@ -86,31 +86,76 @@ namespace lua
 
 	namespace timeoutGuard
 	{
-		void placeWatchdogState(lua_State *L, WatchdogState *ctx)
+		void defaultHook(lua_State *L, lua_Debug* /*ar*/)
 		{
-			auto lua = sol::state_view{L};
-			auto registry = lua.registry();
-			registry[WatchdogState::registryKey()] 
-				= sol::lightuserdata_value{ static_cast<void*>(ctx) };
-		}
-
-		auto getWatchdogState(lua_State *L) -> WatchdogState*
-		{
-			auto lua = sol::state_view{L};
-			auto registry = lua.registry();
-
-			auto state = registry.get_or(WatchdogState::registryKey(),
-										 sol::lightuserdata_value{nullptr});
-
-    		return static_cast<WatchdogState*>(state.value);
-		}
-
-		void watchdog(lua_State *L, lua_Debug* /*ar*/)
-		{
-			auto *state = getWatchdogState(L);
-			if (state && state->isTimedOut()) {
-				luaL_error(L, "Script timed out");
+			auto *ctx = registry::get<HookContext>(L, HookContext::kLuaRegistryKey);
+			if (ctx == nullptr) {
+				luaL_error(L, "Timeout guard: Unable to get hook context.");
+			}
+			if (ctx->isTimedOut()) {
+				luaL_error(L, "Timeout guard: Script timed out.");
 			}
 		}
+
+		void setHook(sol::state_view lua,
+					 InstructionsCount checkPeriod,
+					 lua_Hook func /* = lua::timeoutGuard::defaultHook */)  noexcept
+		{
+			lua_sethook(lua.lua_state(), func, LUA_MASKCOUNT, checkPeriod);
+		}
+
+		void removeHook(sol::state_view lua) noexcept
+		{
+			lua_sethook(lua.lua_state(), nullptr, 0, 0);
+		}
+
+		void Watchdog::start(time::milliseconds limit) noexcept
+		{
+			if (!hookStatus.installed()) {
+				arm();
+			}
+			context.start(limit);
+		}
+
+		void Watchdog::assign(sol::state_view newLua)
+		{
+
+			lua = newLua.lua_state();
+			context.registerIn(lua);
+			hookStatus.registerIn(lua);
+			if (hookStatus.installed()) {
+				arm(hookStatus.checkPeriod, hookStatus.func);
+			}
+		}
+
+		void Watchdog::arm(InstructionsCount checkPeriod /* = kDefaultCheckPeriod */,
+						   lua_Hook hook /* = defaultHook */) noexcept
+		{
+			setHook(lua, checkPeriod, hook);
+			hookStatus = HookStatus{checkPeriod, hook};
+		}
+
+
+		void GuardedScope::onDestroy() noexcept
+		{
+			if (armed()) {
+				watchdog->stop();
+				if (prevPeriod != 0) {
+					watchdog->arm(prevPeriod);
+				}
+			}
+		}
+
+		GuardedScope &GuardedScope::operator=(GuardedScope &&other) noexcept
+		{
+			if (this != &other) {
+				onDestroy();
+				watchdog = other.watchdog;
+				prevPeriod = other.prevPeriod;
+				other.disarm();
+			}
+			return *this;
+		}
+
 	} // namespace timeoutGuard
 } // namespace lua
