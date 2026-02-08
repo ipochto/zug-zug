@@ -116,32 +116,42 @@ namespace lua
 /*-----------------------------------------------------------------------------------------------*/
 	namespace registry
 	{
-		using KeySrc = uint8_t;
+		using Key = sol::lightuserdata_value;
 
-		inline auto asKey(KeySrc &keySrc) noexcept
-			-> sol::lightuserdata_value
-		{
-			return sol::lightuserdata_value{static_cast<void *>(&keySrc)};
-		}
-
-		template <typename T, typename ReturnT = std::remove_pointer_t<T>>
-		ReturnT* get(sol::state_view lua, KeySrc &keySrc) noexcept
-		{
-			auto registry = lua.registry();
-
-			auto data = registry.get_or(asKey(keySrc),
-										sol::lightuserdata_value{nullptr});
-
-			return static_cast<ReturnT*>(data.value);
+		template <typename Tag>
+		struct KeyTag
+		{ 
+			inline static char kTag{};
+			static auto key() noexcept -> Key { return Key{&kTag}; }
 		};
 
-		template <typename T>
-		void set(sol::state_view lua, KeySrc &keySrc, T *ctx)
+		template <typename Tag, typename DataT = Tag>
+		struct RegistrySlot
 		{
-			auto registry = lua.registry();
-			registry[asKey(keySrc)]
-				= sol::lightuserdata_value{static_cast<void*>(ctx)};
-		}
+			using SlotKey = KeyTag<Tag>;
+			using Stored = sol::lightuserdata_value;
+
+			static void set(sol::state_view lua, DataT *data)
+			{
+				lua.registry()[SlotKey::key()] = Stored{static_cast<void *>(data)};
+			}
+
+			static DataT *get(sol::state_view lua)
+			{
+				auto data = sol::object{lua.registry()[SlotKey::key()]};
+
+				if (!data.valid() || !data.is<Stored>()) {
+					return nullptr;
+				}
+				return static_cast<DataT*>(data.as<Stored>().value);
+			}
+
+			static void remove(sol::state_view lua)
+			{
+				lua.registry()[SlotKey::key()] = sol::nil;
+			}
+		};
+
 	} // namespace registry
 /*-----------------------------------------------------------------------------------------------*/
 	namespace timeoutGuard
@@ -159,12 +169,13 @@ namespace lua
 			InstructionsCount checkPeriod {0};
 			lua_Hook func {nullptr};
 
-			// Value is unused; its address is used as a unique key in the Lua registry
-			inline static registry::KeySrc kLuaRegistryKey {};
-			void registerIn(sol::state_view lua) { registry::set(lua, kLuaRegistryKey, this); }
-
 			[[nodiscard]]
 			bool installed() const noexcept { return func != nullptr; }
+
+			using Registry = registry::RegistrySlot<HookStatus>;
+
+			void registerIn(sol::state_view lua) noexcept { Registry::set(lua, this); }
+			void unregister(sol::state_view lua) noexcept { Registry::remove(lua); }
 		};
 /*-----------------------------------------------------------------------------------------------*/
 		void defaultHook(lua_State *L, lua_Debug* /*ar*/);
@@ -190,10 +201,10 @@ namespace lua
 			[[nodiscard]]
 			bool isTimedOut() const noexcept { return enabled && clock::now() > deadline; }
 
-			// Value is unused; its address is used as a unique key in the Lua registry
-			inline static registry::KeySrc kLuaRegistryKey {};
+			using Registry = registry::RegistrySlot<HookContext>;
 
-			void registerIn(sol::state_view lua) { registry::set(lua, kLuaRegistryKey, this); }
+			void registerIn(sol::state_view lua) noexcept { Registry::set(lua, this); }
+			void unregister(sol::state_view lua) noexcept { Registry::remove(lua); }
 		};
 /*-----------------------------------------------------------------------------------------------*/
 		class Watchdog

@@ -88,7 +88,8 @@ namespace lua
 	{
 		void defaultHook(lua_State *L, lua_Debug* /*ar*/)
 		{
-			auto *ctx = registry::get<HookContext>(L, HookContext::kLuaRegistryKey);
+			using Registry = registry::RegistrySlot<HookContext>;
+			auto *ctx = Registry::get(L);
 			if (ctx == nullptr) {
 				luaL_error(L, "Timeout guard: Unable to get hook context.");
 			}
