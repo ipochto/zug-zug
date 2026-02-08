@@ -152,10 +152,11 @@ TEST_CASE("limitedAlloc: overflow is set when usedBase + newSize overflows size_
 	CHECK(allocState.overflow);
 }
 
-TEST_CASE("LuaRuntime + limitedAlloc: used memory reduced to initial value after runtime reset")
+TEST_CASE("limitedAlloc: + LuaRuntime: used memory reduced to initial value after runtime reset")
 {
 	LuaRuntime lua(lua::memory::cDefaultMemLimit);
 
+	lua.reset();
 	auto &allocState = lua.getAllocatorState();
 	size_t initialUsed = allocState.used;
 
@@ -171,9 +172,10 @@ TEST_CASE("LuaRuntime + limitedAlloc: used memory reduced to initial value after
 	CHECK(allocState.used == initialUsed);
 }
 
-TEST_CASE("LuaSandox on LuaRuntime + limitedAlloc: script returns error if memory limit exceeded")
+TEST_CASE("limitedAlloc: + LuaSandox on LuaRuntime: script returns error if memory limit exceeded")
 {
-	LuaRuntime lua(16'384);
+	LuaRuntime lua(lua::memory::cDefaultMemLimit);
+
 	LuaSandbox sandbox(lua, LuaSandbox::Presets::Minimal);
 
 	auto result = sandbox.run(R"(
