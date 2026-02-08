@@ -215,7 +215,7 @@ namespace lua
 			lua_State *lua{nullptr};
 
 		public:
-			Watchdog(sol::state_view lua) { assign(lua); };
+			Watchdog(sol::state_view lua) { attachLuaState(lua); }
 
 			void start(time::milliseconds limit) noexcept;
 			void stop() noexcept { context.stop(); }
@@ -223,7 +223,8 @@ namespace lua
 			[[nodiscard]]
 			bool isTimedOut() const noexcept { return context.isTimedOut(); }
 
-			void assign(sol::state_view newLua);
+			void attachLuaState(sol::state_view newLua);
+			void detachLuaState();
 
 			void arm(InstructionsCount checkPeriod = kDefaultCheckPeriod,
 					 lua_Hook hook = defaultHook) noexcept;
@@ -236,7 +237,12 @@ namespace lua
 			bool armed() const noexcept { return lua != nullptr && hookStatus.func != nullptr; }
 
 			[[nodiscard]]
-			bool isLuaStateChanged(sol::state_view check) const noexcept{ return lua != check.lua_state(); }
+			bool isLuaStateChanged(sol::state_view check) const noexcept
+			{ 
+				return lua != check.lua_state();
+			}
+
+			~Watchdog() { detachLuaState(); }
 		};
 /*-----------------------------------------------------------------------------------------------*/
 		struct GuardedScope

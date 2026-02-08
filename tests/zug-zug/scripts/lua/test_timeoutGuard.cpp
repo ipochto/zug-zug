@@ -56,7 +56,7 @@ TEST_CASE("timeoutGuard: GuardedScope restores hook period")
 }
 
 
-TEST_CASE("timeoutGuard: Watchdog reassigns to new lua_State")
+TEST_CASE("timeoutGuard: Watchdog reassigns to Lua state")
 {
 	sol::state lua1;
 	lua1.open_libraries(sol::lib::base);
@@ -75,7 +75,7 @@ TEST_CASE("timeoutGuard: Watchdog reassigns to new lua_State")
 	sol::state lua2;
 	lua2.open_libraries(sol::lib::base);
 
-	watchdog.assign(lua2);
+	watchdog.attachLuaState(lua2);
 
 	{
 		auto scopeGuard = timeout::GuardedScope(watchdog, 5ms);
@@ -87,6 +87,7 @@ TEST_CASE("timeoutGuard: Watchdog reassigns to new lua_State")
         const sol::error err = result;
         CHECK(consist(err.what(), "Script timed out"));
 	}
+    watchdog.detachLuaState();
 }
 
 

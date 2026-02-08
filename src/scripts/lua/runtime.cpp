@@ -42,6 +42,7 @@ LuaSandbox::libsSandboxingRules{
 
 void LuaRuntime::reset()
 {
+	timeoutGuard.detachLuaState();
 	if (allocatorState.isActivated()) {
 		const auto currentLimit = allocatorState.limit;
 		allocatorState.disableLimit();
@@ -52,7 +53,7 @@ void LuaRuntime::reset()
 	} else {
 		state = sol::state();
 	}
-	timeoutGuard.assign(state);
+	timeoutGuard.attachLuaState(state);
 }
 
 bool LuaRuntime::setMemoryLimit(size_t limit)

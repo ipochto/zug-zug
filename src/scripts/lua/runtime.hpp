@@ -29,7 +29,6 @@ private:
 	enum_set<sol::lib> loadedLibs;
 	lua::timeoutGuard::Watchdog timeoutGuard;
 
-
 public:
 	LuaRuntime()
 		: state{},

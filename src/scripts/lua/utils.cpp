@@ -118,15 +118,27 @@ namespace lua
 			context.start(limit);
 		}
 
-		void Watchdog::assign(sol::state_view newLua)
+		void Watchdog::attachLuaState(sol::state_view newLua)
 		{
-
+			detachLuaState();
 			lua = newLua.lua_state();
 			context.registerIn(lua);
 			hookStatus.registerIn(lua);
 			if (hookStatus.installed()) {
 				arm(hookStatus.checkPeriod, hookStatus.func);
 			}
+		}
+
+		void Watchdog::detachLuaState()
+		{
+			if (lua == nullptr) {
+				return;
+			}
+			removeHook(lua);
+			context.unregister(lua);
+			hookStatus.unregister(lua);
+			lua = nullptr;
+			context.stop();
 		}
 
 		void Watchdog::arm(InstructionsCount checkPeriod /* = kDefaultCheckPeriod */,
