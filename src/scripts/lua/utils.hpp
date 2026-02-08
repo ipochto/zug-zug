@@ -219,7 +219,9 @@ namespace lua::timeoutGuard
 		Watchdog(sol::state_view lua) { attachLuaState(lua); }
 
 		Watchdog(const Watchdog &) = delete;
-		Watchdog operator=(const Watchdog &&) = delete;
+		Watchdog &operator=(const Watchdog &) = delete;
+		Watchdog(Watchdog &&) = delete;
+		Watchdog &operator=(Watchdog &&) = delete;
 
 		void start(time::milliseconds limit) noexcept;
 		void stop() noexcept { context.stop(); }
