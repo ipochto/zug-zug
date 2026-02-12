@@ -151,7 +151,6 @@ namespace lua::timeoutGuard
 		return true;
 	}
 
-
 	bool Watchdog::arm(time::milliseconds limit) noexcept
 	{
 		if (armed()) {
@@ -166,6 +165,10 @@ namespace lua::timeoutGuard
 		if (!CtxRegistry::empty(lua)) {
 			spdlog::error("Unable to arm timeout watchdog: "
 						  "Lua state already has a hook context registered");
+			return false;
+		}
+		if (lua_gethook(lua) != nullptr) {
+			spdlog::error("Unable to arm timeout watchdog: Lua state already has a hook set");
 			return false;
 		}
 		running = true;

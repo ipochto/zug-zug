@@ -128,6 +128,32 @@ TEST_CASE("timeoutGuard: Manual watchdog arm fails while registry slot is occupi
 	watchdog.disarm();
 }
 
+TEST_CASE("timeoutGuard: Manual watchdog arm fails while Lua state already has a hook")
+{
+	sol::state lua;
+	lua.open_libraries(sol::lib::base);
+
+	timeout::setHook(lua, 1, timeout::defaultHook);
+	REQUIRE(lua_gethook(lua.lua_state()) != nullptr);
+	CHECK(timeout::Watchdog::CtxRegistry::empty(lua));
+
+	auto watchdog = timeout::Watchdog(lua);
+	CHECK_FALSE(watchdog.arm(5ms));
+	CHECK_FALSE(watchdog.armed());
+
+	timeout::removeHook(lua);
+	CHECK(lua_gethook(lua.lua_state()) == nullptr);
+
+	REQUIRE(watchdog.arm(5ms));
+	auto result = lua.safe_script(R"(
+		while true do end
+	)");
+	REQUIRE_FALSE(result.valid());
+	CHECK(consist(sol::error{result}.what(), "Script timed out"));
+
+	watchdog.disarm();
+}
+
 TEST_CASE("timeoutGuard: Manual watchdog rearm fails when it is not armed")
 {
 	sol::state lua;
