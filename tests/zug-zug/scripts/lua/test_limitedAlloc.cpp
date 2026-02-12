@@ -156,7 +156,6 @@ TEST_CASE("limitedAlloc: + LuaRuntime: used memory reduced to initial value afte
 {
 	LuaRuntime lua(lua::memory::cDefaultMemLimit);
 
-	lua.reset();
 	auto &allocState = lua.getAllocatorState();
 	size_t initialUsed = allocState.used;
 
