@@ -58,6 +58,8 @@ public:
 	{
 		return allocatorState;
 	}
+	[[nodiscard]]
+	bool usesLimitedAllocator() { return allocatorFn != nullptr; }
 
 	[[nodiscard]]
 	auto makeTimeoutGuardedScope(std::chrono::milliseconds limit)

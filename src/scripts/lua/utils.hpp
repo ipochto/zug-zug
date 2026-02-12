@@ -105,8 +105,6 @@ namespace lua::memory
 		bool overflow {false};
 
 		[[nodiscard]]
-		bool isActivated() const { return used > 0; }
-		[[nodiscard]]
 		bool isLimitEnabled() const { return limit > 0; }
 
 		void disableLimit() { limit = 0; }
