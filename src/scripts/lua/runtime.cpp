@@ -1,12 +1,7 @@
 #include "lua/runtime.hpp"
 
-#include <array>
 #include <fmt/core.h>
-#include <fstream>
-#include <ranges>
 #include <spdlog/spdlog.h>
-
-namespace ranges = std::ranges;
 
 // clang-format off
 const LuaSandbox::SandboxPresets
@@ -45,96 +40,38 @@ LuaSandbox::libsSandboxingRules{
 };
 // clang-format on
 
-namespace lua
+void LuaRuntime::reset()
 {
-	namespace details
-	{
-		struct LibName
-		{
-			sol::lib lib;
-			std::string_view name;
-		};
-		// clang-format off
-		constexpr auto libsNames = std::to_array<LibName> ({
-			{sol::lib::base,      "base"},
-			{sol::lib::bit32,     "bit32"}, // Lua 5.2+
-			{sol::lib::coroutine, "coroutine"},
-			{sol::lib::debug,     "debug"},
-			{sol::lib::ffi,       "ffi"}, // LuaJIT only
-			{sol::lib::io,        "io"},
-			{sol::lib::jit,       "jit"}, // LuaJIT only
-			{sol::lib::math,      "math"},
-			{sol::lib::os,        "os"},
-			{sol::lib::package,   "package"},
-			{sol::lib::string,    "string"},
-			{sol::lib::table,     "table"},
-			{sol::lib::utf8,      "utf8"} // Lua 5.3+
-		});
-		// clang-format on
-	} // namespace details
+	if (usesLimitedAllocator()) {
+		const auto currentLimit = allocatorState.limit;
+		allocatorState.disableLimit();
 
-	constexpr auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>
-	{
-		auto findLib = [lib](auto &lookup) -> bool { return lookup.lib == lib; };
+		state = sol::state(sol::default_at_panic, allocatorFn, &allocatorState);
 
-		const auto &libs = lua::details::libsNames;
-		if (const auto it = ranges::find_if(libs, findLib); it != libs.end()) {
-			return it->name;
-		}
-		return std::nullopt;
+		allocatorState = {.used = allocatorState.used, .limit = currentLimit};
+	} else {
+		state = sol::state();
 	}
+	timeoutGuard.attach(state, true);
+}
 
-	constexpr auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>
-	{
-		auto findLibName = [libName](auto &lookup) -> bool { return lookup.name == libName; };
-
-		const auto &libs = lua::details::libsNames;
-		if (const auto it = ranges::find_if(libs, findLibName); it != libs.end()) {
-			return it->lib;
-		}
-		return std::nullopt;
+bool LuaRuntime::setMemoryLimit(size_t limit)
+{
+	if (usesLimitedAllocator()) {
+		allocatorState.limit = limit;
 	}
+	return usesLimitedAllocator();
+}
 
-	constexpr auto libLookupName(sol::lib lib) noexcept -> std::string_view
-	{
-		return (lib == sol::lib::base) ? "_G" : lua::libName(lib).value_or("");
+void LuaRuntime::require(sol::lib lib)
+{
+	if (!loadedLibs.contains(lib)) {
+		state.open_libraries(lib);
+		loadedLibs.insert(lib);
 	}
+}
 
-	auto toString(const sol::object &obj) -> std::string
-	{
-		sol::state_view lua(obj.lua_state());
-		if (!lua["tostring"].valid()) {
-			return {};
-		}
-		return lua["tostring"](obj).get<std::string>();
-	}
-
-	bool isBytecode(const fs::path &file)
-	{
-		constexpr auto signature = std::string_view(LUA_SIGNATURE);
-
-		auto ifs = std::ifstream(file, std::ios::binary);
-		if (!ifs) {
-			return false;
-		}
-		auto header = std::array<char, signature.size()>{};
-		ifs.read(header.data(), header.size());
-		if (ifs.gcount() < static_cast<std::streamsize>(header.size())) {
-			return false;
-		}
-		return ranges::equal(header, signature);
-	}
-
-	auto makeFnCallResult(sol::state &lua,
-						  const auto &object,
-						  sol::call_status callStatus /* = sol::call_status::ok */)
-		-> sol::protected_function_result
-	{
-		bool isResultValid = callStatus == sol::call_status::ok;
-		sol::stack::push(lua, object);
-		return sol::protected_function_result {lua, -1, isResultValid ? 1 : 0, 1, callStatus};
-	}
-} // namespace lua
+/*-----------------------------------------------------------------------------------------------*/
 
 void LuaSandbox::reset(bool doCollectGrbg /* = false */)
 {
@@ -154,27 +91,38 @@ void LuaSandbox::reset(bool doCollectGrbg /* = false */)
 	}
 }
 
-auto LuaSandbox::run(std::string_view script) -> sol::protected_function_result
+auto LuaSandbox::run(std::string_view script)
+	-> sol::protected_function_result
 {
 	return runtime->state.safe_script(script, sandbox);
 }
 
-auto LuaSandbox::runFile(const fs::path &scriptFile) -> sol::protected_function_result
+auto LuaSandbox::checkIfAllowedToLoad(const fs::path &scriptFile) const
+	-> std::tuple<bool, std::string_view>
 {
-	auto error = [this, &scriptFile](std::string_view msg) {
-		const auto errMsg = fmt::format("{}: {}", msg, scriptFile.string());
+	if (!fs::exists(scriptFile)) {
+		return {false, "Attempting to run a non-existent script"};
+	}
+	if (!isPathAllowed(scriptFile)) {
+		return {false, "Attempting to run a script outside the allowed path"};
+	}
+	if (lua::isBytecode(scriptFile)) {
+		return {false, "Attempting to run precompiled Lua bytecode"};
+	}
+	return {true, {}};
+}
+
+auto LuaSandbox::runFile(const fs::path &scriptFile)
+	-> sol::protected_function_result
+{
+	auto error = [&](std::string_view msg) {
+		const auto errMsg = std::format("{}: {}", msg, scriptFile.string());
 		spdlog::error("{}", errMsg);
 		return lua::makeFnCallResult(runtime->state, errMsg, sol::call_status::file);
 	};
 
-	if (!fs::exists(scriptFile)) {
-		return error("Attempting to run a non-existent script");
-	}
-	if (!isPathAllowed(scriptFile)) {
-		return error("Attempting to run a script outside the allowed path");
-	}
-	if (lua::isBytecode(scriptFile)) {
-		return error("Attempting to run precompiled Lua bytecode");
+	if (const auto [isFileOk, errMsg] = checkIfAllowedToLoad(scriptFile); !isFileOk) {
+		return error(errMsg);
 	}
 	return runtime->state.safe_script_file(scriptFile.string(), sandbox);
 }
@@ -187,41 +135,139 @@ bool LuaSandbox::require(sol::lib lib)
 	return false;
 }
 
-auto LuaSandbox::dofileReplace(sol::stack_object fileName) -> sol::protected_function_result
+auto LuaSandbox::loadfileReplace(sol::stack_object fileName)
+	-> ResultOrErrorMsg
 {
-	auto nil = [this]() { return lua::makeFnCallResult(runtime->state, sol::nil); };
+	auto lua = sol::state_view(runtime->state.lua_state());
+
+	auto makeError = [&](std::string_view errMsg) -> ResultOrErrorMsg {
+		return {sol::nil, sol::make_object(lua, errMsg)};
+	};
 
 	if (!fileName.is<std::string>()) {
-		return nil();
+		return makeError("Bad argument #1 to 'loadfile' (string expected)");
+
 	}
 	const auto filePath = toScriptPath(fileName.as<std::string>());
-	if (auto result = runFile(filePath); result.valid()) {
-		return result;
+	const auto &[isFileOk, fileErrMsg] = checkIfAllowedToLoad(filePath);
+
+	if (!isFileOk) {
+		return makeError(fileErrMsg);
 	}
-	return nil();
+	auto loadResult = lua.load_file(filePath.string(), sol::load_mode::text);
+	if (!loadResult.valid()) {
+		sol::error err = loadResult;
+		return makeError(err.what());
+	}
+	auto chunk = sol::protected_function(loadResult);
+	sandbox.set_on(chunk);
+
+	return { sol::make_object(lua, chunk), sol::nil };
 }
 
-auto LuaSandbox::requireReplace(sol::stack_object target) -> sol::protected_function_result
+auto LuaSandbox::dofileReplace(sol::stack_object fileName)
+	-> sol::protected_function_result
 {
-	auto nil = [this]() { return lua::makeFnCallResult(runtime->state, sol::nil); };
+	if (!fileName.is<std::string>()) {
+		spdlog::error("Unable to execute dofile. Error: bad argument, string expected.");
+		return {};
+	}
+	const auto filePath = toScriptPath(fileName.as<std::string>());
 
+	auto scriptResult = runFile(filePath);
+	if (!scriptResult.valid()) {
+		sol::error err = scriptResult;
+		spdlog::error(R"(Unable to execute dofile("{}"). Error: "{}")",
+					  fileName.as<std::string>(),
+					  err.what());
+		return {};
+	}
+	return scriptResult;
+}
+
+auto LuaSandbox::dofileSafe(sol::stack_object fileName)
+	-> sol::variadic_results
+{
+	auto lua = sol::state_view(runtime->state.lua_state());
+
+	auto result = sol::variadic_results {};
+
+	auto makeError = [&](const std::string &msgError) {
+		result.push_back (sol::make_object(lua, false));
+		result.push_back(sol::make_object(lua, msgError));
+		return result;
+	};
+
+	auto [chunk, error] = loadfileReplace(fileName);
+	if (!chunk.valid()) {
+		const auto msgError = std::format(R"(Unable to load script "{}". Error: "{}")",
+										  fileName.as<std::string>(),
+										  error.as<std::string>());
+		return makeError(msgError);
+	}
+	auto fn = chunk.as<sol::protected_function>();
+	auto scriptResult = fn();
+	if (!scriptResult.valid()) {
+		sol::error err = scriptResult;
+		const auto msgError = std::format(R"(Unable to execute script "{}". Error: "{}")",
+										  fileName.as<std::string>(),
+										  err.what());
+		return makeError(msgError);
+	}
+	result.push_back (sol::make_object(lua, true));
+	for (auto &&value : scriptResult) {
+		result.push_back(value);
+	}
+	return result;
+}
+
+auto LuaSandbox::requireFile(sol::stack_object fileName)
+	-> ResultOrErrorMsg
+{
+	auto [chunk, errMsg] = loadfileReplace(fileName);
+	if (!chunk.valid()) {
+		return { sol::nil, errMsg };
+	}
+	auto function = chunk.as<sol::protected_function>();
+	auto result = function();
+	if (!result.valid()) {
+		sol::error err = result;
+		return { sol::nil, sol::make_object(runtime->state, err.what()) };
+	}
+	if (result.return_count() == 0) {
+		return {};
+	}
+	return { result[0], sol::nil };
+}
+
+auto LuaSandbox::requireReplace(sol::stack_object target)
+	-> sol::object
+{
 	if (!target.is<std::string>()) {
-		return nil();
+		spdlog::error("Unable to execute 'require'. Error: bad argument, string expected.");
+		return sol::nil;
 	}
 	const auto possibleLibName = target.as<std::string>();
-	if (const auto lib = lua::libByName(possibleLibName); lib.has_value()) {
-		if (require(*lib)) {
-			const auto libLookupName = lua::libLookupName(*lib);
-			return lua::makeFnCallResult(runtime->state, sandbox[libLookupName]);
-		}
-		return nil();
+	const auto lib = lua::libByName(possibleLibName);
+	if (!lib) {
+		spdlog::error(R"(require("{}"): library not found.)", possibleLibName);
+		return sol::nil;
 	}
-	return dofileReplace(target);
+	if (!require(*lib)) {
+		spdlog::error(R"(require("{}"): library is forbidden.)", possibleLibName);
+		return sol::nil;
+	}
+	const auto libLookupName = lua::libLookupName(*lib);
+	return sandbox[libLookupName];
 }
 
 void LuaSandbox::loadSafeExternalScriptFilesRoutine()
 {
 	sandbox.set_function("dofile", &LuaSandbox::dofileReplace, this);
+	sandbox.set_function("safe_dofile", &LuaSandbox::dofileSafe, this);
+
+	sandbox.set_function("loadfile", &LuaSandbox::loadfileReplace, this);
+	sandbox.set_function("require_file", &LuaSandbox::requireFile, this);
 	sandbox.set_function("require", &LuaSandbox::requireReplace, this);
 }
 
@@ -281,37 +327,54 @@ void LuaSandbox::copyLibFromState(sol::lib lib, const LibSymbolsRules &rules)
 	}
 }
 
-void LuaSandbox::allowScriptPath(const fs::path &path)
+bool LuaSandbox::allowScriptPath(const fs::path &path)
 {
 	if (scriptsRoot.empty() || path.empty()) {
-		return;
+		return false;
+	}
+	if (path.empty()
+		|| (scriptsRoot.empty() && path.is_relative())) {
+		return false;
 	}
 	const auto allow = path.is_relative() ? scriptsRoot / path : path;
 	allowedScriptPaths.push_back(fs_utils::normalize(allow));
+	return true;
 }
 
 void LuaSandbox::setPathsForScripts(const fs::path &root, const Paths &allowed)
 {
-	if (root.empty() || root.is_relative()) {
-		scriptsRoot.clear();
-		allowedScriptPaths.clear();
-		return;
+	scriptsRoot.clear();
+	if (!root.empty() && root.is_absolute()) {
+		scriptsRoot = fs_utils::normalize(root);
 	}
-	scriptsRoot = fs_utils::normalize(root);
-
 	allowedScriptPaths.clear();
 	for (const auto &path : allowed) {
 		allowScriptPath(path);
 	}
 }
 
-auto LuaSandbox::toScriptPath(const std::string &fileName) const -> fs::path
+auto LuaSandbox::toScriptPath(const std::string &fileName)
+	const -> fs::path
 {
 	auto scriptPath = fs::path(fileName);
-	if (scriptPath.is_relative()) {
+	if (scriptPath.is_relative() && !scriptsRoot.empty()) {
 		scriptPath = scriptsRoot / scriptPath;
 	}
 	return scriptPath.lexically_normal();
+}
+
+bool LuaSandbox::isPathAllowed(const fs::path &scriptFile) const
+{
+	if (scriptFile.empty()) {
+		return false;
+	}
+	if (scriptFile.is_relative()) {
+		if (scriptsRoot.empty()) {
+			return false;
+		}
+		return fs_utils::startsWith(scriptsRoot / scriptFile, allowedScriptPaths);
+	}
+	return fs_utils::startsWith(scriptFile, allowedScriptPaths);
 }
 
 void LuaSandbox::printReplace(sol::variadic_args args)

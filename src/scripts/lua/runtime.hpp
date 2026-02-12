@@ -1,6 +1,8 @@
 #pragma once
 
 #include "lua/sol2.hpp"
+#include "lua/utils.hpp"
+
 #include "utils/enum_set.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/optional_ref.hpp"
@@ -13,37 +15,66 @@ template <typename T>
 concept SolLibContainer =
 	std::ranges::range<T>
 	&& std::same_as<std::ranges::range_value_t<T>, sol::lib>;
-
+/*-----------------------------------------------------------------------------------------------*/
 class LuaRuntime
 {
+private:
+	lua::memory::LimitedAllocatorState allocatorState{};
+	lua::memory::Allocator allocatorFn{nullptr};
+
 public:
 	sol::state state;
 
-	LuaRuntime() = default;
+private:
+	enum_set<sol::lib> loadedLibs;
+	lua::timeoutGuard::Watchdog timeoutGuard;
+
+public:
+	LuaRuntime()
+		: state{},
+		  timeoutGuard(state)
+	{}
+
 	~LuaRuntime() = default;
+
+	LuaRuntime(size_t memoryLimit, lua::memory::Allocator fn = lua::memory::limitedAlloc)
+		: allocatorState({.limit = memoryLimit}),
+		  allocatorFn(fn),
+		  state(sol::default_at_panic, fn, &allocatorState),
+		  timeoutGuard(state)
+	{}
 
 	LuaRuntime(const LuaRuntime &) = delete;
 	LuaRuntime(LuaRuntime &&) = delete;
 	LuaRuntime &operator=(const LuaRuntime &) = delete;
 	LuaRuntime &operator=(LuaRuntime &&) = delete;
 
-	void require(sol::lib lib)
+	void reset();
+	bool setMemoryLimit(size_t limit);
+	void require(sol::lib lib);
+
+	[[nodiscard]]
+	auto getAllocatorState() const -> const lua::memory::LimitedAllocatorState &
 	{
-		if (!loadedLibs.contains(lib)) {
-			state.open_libraries(lib);
-			loadedLibs.insert(lib);
-		}
+		return allocatorState;
 	}
+	[[nodiscard]]
+	bool usesLimitedAllocator() { return allocatorFn != nullptr; }
 
-private:
-	enum_set<sol::lib> loadedLibs;
+	[[nodiscard]]
+	auto makeTimeoutGuardedScope(std::chrono::milliseconds limit)
+		-> lua::timeoutGuard::GuardedScope
+	{
+		return lua::timeoutGuard::GuardedScope{timeoutGuard, limit};
+	}
 };
-
+/*-----------------------------------------------------------------------------------------------*/
 class LuaSandbox
 {
 public:
 	enum class Presets { Core, Minimal, Complete, Custom };
 	using Paths = std::vector<fs::path>;
+	using ResultOrErrorMsg = std::tuple<sol::object, sol::object>;
 
 	explicit LuaSandbox(LuaRuntime &runtime,
 						Presets preset,
@@ -73,7 +104,14 @@ public:
 
 	[[nodiscard]]
 	bool require(sol::lib lib);
-	void allowScriptPath(const fs::path &path);
+	bool allowScriptPath(const fs::path &path);
+
+	[[nodiscard]]
+	auto makeTimeoutGuardedScope(std::chrono::milliseconds limit)
+		-> lua::timeoutGuard::GuardedScope
+	{
+		return runtime->makeTimeoutGuardedScope(limit);
+	}
 
 private:
 	using LibNames = std::vector<std::string_view>;
@@ -108,13 +146,18 @@ private:
 	auto toScriptPath(const std::string &fileName) const -> fs::path;
 
 	[[nodiscard]]
-	bool isPathAllowed(const fs::path &scriptFile) const
-	{
-		return fs_utils::startsWith(scriptFile, allowedScriptPaths);
-	}
+	bool isPathAllowed(const fs::path &scriptFile) const;
 
+	[[nodiscard]]
+	auto checkIfAllowedToLoad(const fs::path &scriptFile) const
+		-> std::tuple<bool, std::string_view>;
+
+	auto loadfileReplace(sol::stack_object fileName) -> ResultOrErrorMsg;
 	auto dofileReplace(sol::stack_object fileName) -> sol::protected_function_result;
-	auto requireReplace(sol::stack_object target) -> sol::protected_function_result;
+	auto dofileSafe(sol::stack_object fileName) -> sol::variadic_results;
+	auto requireReplace(sol::stack_object target) -> sol::object;
+	auto requireFile(sol::stack_object fileName) -> ResultOrErrorMsg;
+
 	void printReplace(sol::variadic_args args);
 
 	void loadSafeExternalScriptFilesRoutine();
@@ -137,27 +180,3 @@ private:
 	static const SandboxPresets sandboxPresets;
 	static const LibsSandboxingRulesMap libsSandboxingRules;
 };
-
-namespace lua
-{
-	[[nodiscard]]
-	constexpr auto libName(sol::lib lib) noexcept -> std::optional<std::string_view>;
-
-	[[nodiscard]]
-	constexpr auto libByName(std::string_view libName) noexcept -> std::optional<sol::lib>;
-
-	[[nodiscard]]
-	constexpr auto libLookupName(sol::lib lib) noexcept -> std::string_view;
-
-	[[nodiscard]]
-	auto toString(const sol::object &obj) -> std::string;
-
-	[[nodiscard]]
-	bool isBytecode(const fs::path &file);
-
-	[[nodiscard]]
-	auto makeFnCallResult(sol::state &lua,
-						  const auto &object,
-						  sol::call_status callStatus = sol::call_status::ok)
-		-> sol::protected_function_result;
-} // namespace lua
