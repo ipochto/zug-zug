@@ -147,6 +147,9 @@ namespace lua::registry
 			return static_cast<DataT*>(data.as<Stored>().value);
 		}
 
+		[[nodiscard]]
+		static bool empty(sol::state_view lua) { return get(lua) == nullptr; }
+
 		static void remove(sol::state_view lua)
 		{
 			lua.registry()[SlotKey::key()] = sol::nil;
@@ -159,25 +162,10 @@ namespace lua::timeoutGuard
 {
 	using namespace std::chrono_literals;
 	namespace time = std::chrono;
-	using clock = time::steady_clock;
 	using InstructionsCount = int;
 
 	constexpr auto kDefaultCheckPeriod {10'000};
 	constexpr auto kDefaultLimit {5ms};
-/*-----------------------------------------------------------------------------------------------*/
-	struct HookStatus
-	{
-		InstructionsCount checkPeriod {0};
-		lua_Hook func {nullptr};
-
-		[[nodiscard]]
-		bool installed() const noexcept { return func != nullptr; }
-
-		using Registry = registry::RegistrySlot<HookStatus>;
-
-		void registerIn(sol::state_view lua) noexcept { Registry::set(lua, this); }
-		void unregister(sol::state_view lua) noexcept { Registry::remove(lua); }
-	};
 /*-----------------------------------------------------------------------------------------------*/
 	void defaultHook(lua_State *L, lua_Debug* /*ar*/);
 
@@ -189,6 +177,8 @@ namespace lua::timeoutGuard
 /*-----------------------------------------------------------------------------------------------*/
 	struct HookContext
 	{
+		using clock = time::steady_clock;
+
 		clock::time_point deadline{};
 		bool enabled{false};
 
@@ -197,102 +187,102 @@ namespace lua::timeoutGuard
 			enabled = true;
 			deadline = clock::now() + limit;
 		}
-		void stop() noexcept { enabled = false; }
+		void reset() noexcept { *this = HookContext{}; }
 
 		[[nodiscard]]
 		bool isTimedOut() const noexcept { return enabled && clock::now() > deadline; }
-
-		using Registry = registry::RegistrySlot<HookContext>;
-
-		void registerIn(sol::state_view lua) noexcept { Registry::set(lua, this); }
-		void unregister(sol::state_view lua) noexcept { Registry::remove(lua); }
 	};
 /*-----------------------------------------------------------------------------------------------*/
 	class Watchdog
 	{
 	private:
-		HookStatus hookStatus{};
-		HookContext context{};
 		lua_State *lua{nullptr};
+		InstructionsCount checkPeriod{0};
+		lua_Hook hook{nullptr};
+		HookContext context{};
+
+		bool running{false};
 
 	public:
-		Watchdog(sol::state_view lua) { attachLuaState(lua); }
+		using CtxRegistry = registry::RegistrySlot<HookContext>;
+
+		Watchdog(sol::state_view lua,
+				 InstructionsCount checkPeriod = kDefaultCheckPeriod,
+				 lua_Hook hookFn = defaultHook)
+			: lua(lua),
+			  checkPeriod(checkPeriod > 0 ? checkPeriod : kDefaultCheckPeriod),
+			  hook(hookFn)
+		{}
 
 		Watchdog(const Watchdog &) = delete;
 		Watchdog &operator=(const Watchdog &) = delete;
 		Watchdog(Watchdog &&) = delete;
 		Watchdog &operator=(Watchdog &&) = delete;
+		~Watchdog() { detach(); }
 
-		void start(time::milliseconds limit) noexcept;
-		void stop() noexcept { context.stop(); }
+		bool attach(sol::state_view newLua, bool force = false) noexcept;
+		void detach() noexcept;
 
-		[[nodiscard]]
-		bool isTimedOut() const noexcept { return context.isTimedOut(); }
-
-		void attachLuaState(sol::state_view newLua);
-		void detachLuaState();
+		bool configureHook(InstructionsCount newCheckPeriod, lua_Hook newHook) noexcept;
 
 		[[nodiscard]]
-		bool attachedToLuaState() const noexcept{ return lua != nullptr; }
+		bool armed() const noexcept { return running; }
+		[[nodiscard]]
+		bool timeOut() const noexcept { return context.isTimedOut(); }
 
-		void arm(InstructionsCount checkPeriod = kDefaultCheckPeriod) noexcept;
-		void arm(InstructionsCount checkPeriod, lua_Hook hook) noexcept;
-
+		bool arm(time::milliseconds limit) noexcept;
+		bool rearm(time::milliseconds limit) noexcept;
 		void disarm() noexcept;
 
+	private:
 		[[nodiscard]]
-		auto getPeriod() const noexcept -> InstructionsCount { return hookStatus.checkPeriod; }
-
-		[[nodiscard]]
-		bool armed() const noexcept { return attachedToLuaState() && hookStatus.func != nullptr; }
-
-		[[nodiscard]]
-		bool isLuaStateChanged(sol::state_view check) const noexcept
-		{
-			return lua != check.lua_state();
-		}
-
-		~Watchdog() { detachLuaState(); }
+		bool attached() const noexcept { return lua != nullptr; }
 	};
 /*-----------------------------------------------------------------------------------------------*/
-	struct GuardedScope
+	class GuardedScope
 	{
-		Watchdog *watchdog;
-		InstructionsCount prevPeriod{0};
+	private:
+		Watchdog *watchdog{nullptr};
 
-		GuardedScope(Watchdog &watchdog, time::milliseconds limit) noexcept
+	public:
+		GuardedScope(Watchdog &watchdog, time::milliseconds limit = kDefaultLimit)
 			: watchdog(&watchdog)
 		{
-			watchdog.start(limit);
-		}
-
-		GuardedScope(Watchdog &watchdog,
-					 time::milliseconds limit,
-					 InstructionsCount overridePeriod) noexcept
-			: watchdog(&watchdog),
-			  prevPeriod(watchdog.getPeriod())
-		{
-			watchdog.arm(overridePeriod);
-			watchdog.start(limit);
+			if (!watchdog.arm(limit)) {
+				disable();
+			}
 		}
 
 		GuardedScope(const GuardedScope &) = delete;
 		GuardedScope &operator=(const GuardedScope &) = delete;
 
-		void disarm() noexcept { watchdog = nullptr; prevPeriod = 0; }
-		void onDestroy() noexcept;
+		GuardedScope(GuardedScope &&other) noexcept : watchdog(other.watchdog) { other.disable(); }
+		GuardedScope &operator=(GuardedScope &&other) = delete;
 
-		GuardedScope(GuardedScope &&other) noexcept
-			: watchdog(other.watchdog),
-			  prevPeriod(other.prevPeriod)
+		~GuardedScope()
 		{
-			other.disarm();
+			if (disabled()) {
+				return;
+			}
+			watchdog->disarm();
 		}
-		GuardedScope &operator=(GuardedScope &&other) noexcept;
 
-		~GuardedScope() { onDestroy(); }
+		bool rearm(time::milliseconds limit = kDefaultLimit)
+		{
+			if (disabled()) {
+				return false;
+			}
+			watchdog->disarm();
+			return watchdog->arm(limit);
+		}
 
 		[[nodiscard]]
-		bool armed() const { return watchdog != nullptr; }
+		bool timedOut() const noexcept { return !disabled() && watchdog->timeOut(); }
+
+	private:
+		void disable() noexcept { watchdog = nullptr; }
+
+		[[nodiscard]]
+		bool disabled() const noexcept { return watchdog == nullptr; }
 	};
 } // namespace lua::timeoutGuard
