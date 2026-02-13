@@ -58,6 +58,8 @@ public:
 	{
 		return allocatorState;
 	}
+	void resetAlloatorErrors() noexcept { allocatorState.resetErrorFlags(); }
+
 	[[nodiscard]]
 	bool usesLimitedAllocator() { return allocatorFn != nullptr; }
 

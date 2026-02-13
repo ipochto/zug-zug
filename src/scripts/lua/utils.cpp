@@ -50,7 +50,7 @@ namespace lua::memory
 		if (newSize == 0) {
 			if (ptr != nullptr) {
 				allocState->used -= (allocState->used >= currSize) ? currSize
-																	: allocState->used;
+																   : allocState->used;
 			}
 			std::free(ptr);
 			return nullptr;
