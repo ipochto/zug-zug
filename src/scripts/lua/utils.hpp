@@ -107,6 +107,8 @@ namespace lua::memory
 		[[nodiscard]]
 		bool isLimitEnabled() const { return limit > 0; }
 
+		void resetErrorFlags() noexcept { limitReached = overflow = false; }
+
 		void disableLimit() { limit = 0; }
 	};
 

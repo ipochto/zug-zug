@@ -152,6 +152,42 @@ TEST_CASE("limitedAlloc: overflow is set when usedBase + newSize overflows size_
 	CHECK(allocState.overflow);
 }
 
+TEST_CASE("limitedAlloc: resetErrorFlags clears limitReached and overflow")
+{
+	constexpr size_t limit = 64;
+	constexpr size_t objSize = 16;
+
+	auto allocState = mem::LimitedAllocatorState({.limit = limit});
+
+	void *ptr = mem::limitedAlloc(&allocState, nullptr, 0, limit);
+	REQUIRE(ptr != nullptr);
+
+	void *ptr2 = mem::limitedAlloc(&allocState, ptr, limit, limit + 1);
+	CHECK(ptr2 == nullptr);
+	REQUIRE(allocState.limitReached);
+	CHECK_FALSE(allocState.overflow);
+
+	allocState.resetErrorFlags();
+	CHECK_FALSE(allocState.limitReached);
+	CHECK_FALSE(allocState.overflow);
+
+	// cleanup
+	mem::limitedAlloc(&allocState, ptr, limit, 0);
+	CHECK(allocState.used == 0);
+
+	allocState.used = std::numeric_limits<std::size_t>::max() - 1;
+	allocState.limit = std::numeric_limits<std::size_t>::max();
+
+	void *ptr3 = mem::limitedAlloc(&allocState, nullptr, 0, objSize);
+	CHECK(ptr3 == nullptr);
+	REQUIRE(allocState.overflow);
+	CHECK_FALSE(allocState.limitReached);
+
+	allocState.resetErrorFlags();
+	CHECK_FALSE(allocState.limitReached);
+	CHECK_FALSE(allocState.overflow);
+}
+
 TEST_CASE("limitedAlloc: + LuaRuntime: used memory reduced to initial value after runtime reset")
 {
 	LuaRuntime lua(lua::memory::cDefaultMemLimit);
