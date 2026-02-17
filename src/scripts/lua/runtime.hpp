@@ -54,14 +54,20 @@ public:
 	void require(sol::lib lib);
 
 	[[nodiscard]]
+	bool usesLimitedAllocator() { return allocatorFn != nullptr; }
+
+	[[nodiscard]]
+	bool hasAllocError() const noexcept
+	{
+		return allocatorState.limitReached || allocatorState.overflow;
+	}
+	void resetAllocErrors() noexcept { allocatorState.resetErrorFlags(); }
+
+	[[nodiscard]]
 	auto getAllocatorState() const -> const lua::memory::LimitedAllocatorState &
 	{
 		return allocatorState;
 	}
-	void resetAlloatorErrors() noexcept { allocatorState.resetErrorFlags(); }
-
-	[[nodiscard]]
-	bool usesLimitedAllocator() { return allocatorFn != nullptr; }
 
 	[[nodiscard]]
 	auto makeTimeoutGuardedScope(std::chrono::milliseconds limit)
