@@ -6,7 +6,7 @@
 
 using namespace std::chrono_literals;
 
-bool consist(std::string_view src, std::string_view fragment)
+bool contains(std::string_view src, std::string_view fragment)
 {
 	return src.find(fragment) != std::string_view::npos;
 }
@@ -29,7 +29,7 @@ TEST_CASE("timeoutGuard: Manual watchdog arms and times out")
 		while true do end
 	)");
 	REQUIRE_FALSE(result.valid());
-	CHECK(consist(sol::error{result}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result}.what(), "Script timed out"));
 
 	CHECK(watchdog.timeOut());
 	watchdog.disarm();
@@ -59,13 +59,13 @@ TEST_CASE("timeoutGuard: Manual watchdog re-armed to protect multiple executions
 		while true do end
 	)");
 	REQUIRE_FALSE(result1.valid());
-	CHECK(consist(sol::error{result1}.what(), "Script timed out"));
-
+	CHECK(contains(sol::error{result1}.what(), "Script timed out"));
+	sol::error err1 = result1;
 	CHECK(watchdog.timeOut());
 
 	auto result2 = lua.safe_script(boilerPlate);
 	REQUIRE_FALSE(result2.valid());
-	CHECK(consist(sol::error{result2}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result2}.what(), "Script timed out"));
 
 	REQUIRE(watchdog.rearm(5ms));
 	CHECK_FALSE(watchdog.timeOut());
@@ -95,7 +95,7 @@ TEST_CASE("timeoutGuard: Watchdog manual arm/disarm updates hook and registry")
 		while true do end
 	)");
 	REQUIRE_FALSE(result.valid());
-	CHECK(consist(sol::error{result}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result}.what(), "Script timed out"));
 
 	watchdog.disarm();
 	CHECK_FALSE(watchdog.armed());
@@ -123,7 +123,7 @@ TEST_CASE("timeoutGuard: Manual watchdog arm fails while registry slot is occupi
 		while true do end
 	)");
 	REQUIRE_FALSE(result.valid());
-	CHECK(consist(sol::error{result}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result}.what(), "Script timed out"));
 
 	watchdog.disarm();
 }
@@ -149,7 +149,7 @@ TEST_CASE("timeoutGuard: Manual watchdog arm fails while Lua state already has a
 		while true do end
 	)");
 	REQUIRE_FALSE(result.valid());
-	CHECK(consist(sol::error{result}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result}.what(), "Script timed out"));
 
 	watchdog.disarm();
 }
@@ -196,7 +196,7 @@ TEST_CASE("timeoutGuard: Manual watchdog detach disarms and requires reattach")
 		while true do end
 	)");
 	REQUIRE_FALSE(result.valid());
-	CHECK(consist(sol::error{result}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result}.what(), "Script timed out"));
 
 	watchdog.disarm();
 }
@@ -216,7 +216,7 @@ TEST_CASE("timeoutGuard: Two watchdogs on same Lua state cannot arm simultaneous
 		while true do end
 	)");
 	REQUIRE_FALSE(result1.valid());
-	CHECK(consist(sol::error{result1}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result1}.what(), "Script timed out"));
 
 	watchdog1.disarm();
 
@@ -225,7 +225,7 @@ TEST_CASE("timeoutGuard: Two watchdogs on same Lua state cannot arm simultaneous
 		while true do end
 	)");
 	REQUIRE_FALSE(result2.valid());
-	CHECK(consist(sol::error{result2}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result2}.what(), "Script timed out"));
 
 	watchdog2.disarm();
 }
@@ -247,7 +247,7 @@ TEST_CASE("timeoutGuard: Watchdog manual attach rejects reassign while armed")
 		while true do end
 	)");
 	REQUIRE_FALSE(lua1Result.valid());
-	CHECK(consist(sol::error{lua1Result}.what(), "Script timed out"));
+	CHECK(contains(sol::error{lua1Result}.what(), "Script timed out"));
 
 	watchdog.disarm();
 
@@ -258,7 +258,7 @@ TEST_CASE("timeoutGuard: Watchdog manual attach rejects reassign while armed")
 		while true do end
 	)");
 	REQUIRE_FALSE(lua2Result.valid());
-	CHECK(consist(sol::error{lua2Result}.what(), "Script timed out"));
+	CHECK(contains(sol::error{lua2Result}.what(), "Script timed out"));
 
 	watchdog.disarm();
 }
@@ -274,7 +274,7 @@ TEST_CASE("timeoutGuard: default hook reports missing context")
 		while true do end
 	)");
 	REQUIRE_FALSE(result.valid());
-	CHECK(consist(sol::error{result}.what(), "Unable to get hook context"));
+	CHECK(contains(sol::error{result}.what(), "Unable to get hook context"));
 
 	timeout::removeHook(lua);
 	CHECK(lua_gethook(lua.lua_state()) == nullptr);
@@ -298,7 +298,7 @@ TEST_CASE("timeoutGuard: ScopeGuard arms on start and times out")
 			while true do end
 		)");
 		REQUIRE_FALSE(result.valid());
-		CHECK(consist(sol::error{result}.what(), "Script timed out"));
+		CHECK(contains(sol::error{result}.what(), "Script timed out"));
 	}
 }
 
@@ -321,7 +321,7 @@ TEST_CASE("timeoutGuard: ScopeGuard can be re-armed multiple times")
 				while true do end
 			)");
 			REQUIRE_FALSE(result.valid());
-			CHECK(consist(sol::error{result}.what(), "Script timed out"));
+			CHECK(contains(sol::error{result}.what(), "Script timed out"));
 		}
 		CHECK_FALSE(watchdog.armed());
 	}
@@ -345,7 +345,7 @@ TEST_CASE("timeoutGuard: Secondary scope guard is disabled when watchdog already
 		while true do end
 	)");
 	REQUIRE_FALSE(result.valid());
-	CHECK(consist(sol::error{result}.what(), "Script timed out"));
+	CHECK(contains(sol::error{result}.what(), "Script timed out"));
 
 	CHECK(primaryGuard.timedOut());
 	CHECK_FALSE(secondaryGuard.timedOut());
@@ -370,7 +370,7 @@ TEST_CASE("timeoutGuard: Scope guard move transfers watchdog ownership")
 			while true do end
 		)");
 		REQUIRE_FALSE(result.valid());
-		CHECK(consist(sol::error{result}.what(), "Script timed out"));
+		CHECK(contains(sol::error{result}.what(), "Script timed out"));
 		CHECK(guard2.timedOut());
 	}
 
@@ -407,7 +407,7 @@ TEST_CASE("timeoutGuard:GuardedScope reassigns Watchdog to Lua state")
 			while true do end
 		)");
 		REQUIRE_FALSE(result.valid());
-		CHECK(consist(sol::error{result}.what(), "Script timed out"));
+		CHECK(contains(sol::error{result}.what(), "Script timed out"));
 	}
 }
 
@@ -430,7 +430,7 @@ TEST_CASE("timeoutGuard: Attach while armed keeps old Lua state protected")
 			while true do end
 		)");
 		REQUIRE_FALSE(lua1Result.valid());
-		CHECK(consist(sol::error{lua1Result}.what(), "Script timed out"));
+		CHECK(contains(sol::error{lua1Result}.what(), "Script timed out"));
 
 		auto lua2Result = lua2.safe_script("return 42");
 		REQUIRE(lua2Result.valid());
@@ -446,7 +446,7 @@ TEST_CASE("timeoutGuard: Attach while armed keeps old Lua state protected")
 			while true do end
 		)");
 		REQUIRE_FALSE(lua2Result.valid());
-		CHECK(consist(sol::error{lua2Result}.what(), "Script timed out"));
+		CHECK(contains(sol::error{lua2Result}.what(), "Script timed out"));
 	}
 }
 
@@ -462,7 +462,7 @@ TEST_CASE("timeoutGuard: GuardedScope stops infinite loop executed from sandbox"
 			while true do end
 		)");
 		REQUIRE_FALSE(result.valid());
-		CHECK(consist(sol::error{result}.what(), "Script timed out"));
+		CHECK(contains(sol::error{result}.what(), "Script timed out"));
 	}
 }
 
@@ -486,13 +486,13 @@ TEST_CASE("timeoutGuard: GuardedScope can be re-armed to protect multiple execut
 			while true do end
 		)");
 		REQUIRE_FALSE(result1.valid());
-		CHECK(consist(sol::error{result1}.what(), "Script timed out"));
+		CHECK(contains(sol::error{result1}.what(), "Script timed out"));
 
 		CHECK(scopeGuard.timedOut());
 
 		auto result2 = sandbox.run(boilerPlate);
 		REQUIRE_FALSE(result2.valid());
-		CHECK(consist(sol::error{result2}.what(), "Script timed out"));
+		CHECK(contains(sol::error{result2}.what(), "Script timed out"));
 
 		REQUIRE(scopeGuard.rearm(5ms));
 		CHECK_FALSE(scopeGuard.timedOut());
@@ -504,7 +504,7 @@ TEST_CASE("timeoutGuard: GuardedScope can be re-armed to protect multiple execut
 			while true do end
 		)");
 		REQUIRE_FALSE(result4.valid());
-		CHECK(consist(sol::error{result4}.what(), "Script timed out"));
+		CHECK(contains(sol::error{result4}.what(), "Script timed out"));
 	}
 }
 
@@ -521,7 +521,7 @@ TEST_CASE("timeoutGuard: One runtime guard applies to multiple sandboxes on the 
 			while true do end
 		)");
 		REQUIRE_FALSE(aTimeout.valid());
-		CHECK(consist(sol::error{aTimeout}.what(), "Script timed out"));
+		CHECK(contains(sol::error{aTimeout}.what(), "Script timed out"));
 
 		CHECK(scopeGuard.timedOut());
 
@@ -533,6 +533,6 @@ TEST_CASE("timeoutGuard: One runtime guard applies to multiple sandboxes on the 
 		)");
 		REQUIRE_FALSE(bTimeout.valid());
 
-		CHECK(consist(sol::error{bTimeout}.what(), "Script timed out"));
+		CHECK(contains(sol::error{bTimeout}.what(), "Script timed out"));
 	}
 }
