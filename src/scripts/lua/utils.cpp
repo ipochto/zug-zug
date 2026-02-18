@@ -89,7 +89,7 @@ namespace lua::timeoutGuard
 {
 	void defaultHook(lua_State *L, lua_Debug* /*ar*/)
 	{
-		using Registry = registry::RegistrySlot<HookContext>;
+		using Registry = registry::TaggedRegistrySlot<HookContext>;
 		auto *ctx = Registry::get(L);
 		if (ctx == nullptr) {
 			luaL_error(L, "Timeout guard: Unable to get hook context.");
