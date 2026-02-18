@@ -125,7 +125,7 @@ namespace lua::registry
 	};
 
 	template <typename Tag, typename DataT = Tag>
-	struct TaggedRegistrySlot
+	struct RegistrySlot
 	{
 		using SlotKey = KeyTag<Tag>;
 		using Stored = sol::lightuserdata_value;
@@ -202,7 +202,7 @@ namespace lua::timeoutGuard
 		bool running{false};
 
 	public:
-		using CtxRegistry = registry::TaggedRegistrySlot<HookContext>;
+		using CtxRegistry = registry::RegistrySlot<HookContext>;
 
 		Watchdog(sol::state_view lua,
 				 InstructionsCount checkPeriod = kDefaultCheckPeriod,
