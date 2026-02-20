@@ -31,10 +31,37 @@ TEST_CASE("timeoutGuard: Manual watchdog arms and times out")
 	REQUIRE_FALSE(result.valid());
 	CHECK(contains(sol::error{result}.what(), "Script timed out"));
 
-	CHECK(watchdog.timeOut());
+	CHECK(watchdog.timedOut());
 	watchdog.disarm();
-	CHECK_FALSE(watchdog.timeOut());
+	CHECK_FALSE(watchdog.timedOut());
 	CHECK_FALSE(watchdog.armed());
+}
+
+TEST_CASE("timeoutGuard: Manual watchdog uses default hook when constructed with null hook")
+{
+	sol::state lua;
+	lua.open_libraries(sol::lib::base);
+
+	auto watchdog = timeout::Watchdog(lua, 1'000, nullptr);
+
+	CHECK(timeout::Watchdog::CtxRegistry::empty(lua));
+	CHECK(lua_gethook(lua.lua_state()) == nullptr);
+
+	REQUIRE(watchdog.arm(5ms));
+	CHECK(watchdog.armed());
+	CHECK(lua_gethook(lua.lua_state()) == timeout::defaultHook);
+
+	auto result = lua.safe_script(R"(
+		while true do end
+	)");
+	REQUIRE_FALSE(result.valid());
+	CHECK(contains(sol::error{result}.what(), "Script timed out"));
+	CHECK(watchdog.timedOut());
+
+	watchdog.disarm();
+	CHECK_FALSE(watchdog.armed());
+	CHECK(timeout::Watchdog::CtxRegistry::empty(lua));
+	CHECK(lua_gethook(lua.lua_state()) == nullptr);
 }
 
 TEST_CASE("timeoutGuard: Manual watchdog re-armed to protect multiple executions")
@@ -61,14 +88,14 @@ TEST_CASE("timeoutGuard: Manual watchdog re-armed to protect multiple executions
 	REQUIRE_FALSE(result1.valid());
 	CHECK(contains(sol::error{result1}.what(), "Script timed out"));
 	sol::error err1 = result1;
-	CHECK(watchdog.timeOut());
+	CHECK(watchdog.timedOut());
 
 	auto result2 = lua.safe_script(boilerPlate);
 	REQUIRE_FALSE(result2.valid());
 	CHECK(contains(sol::error{result2}.what(), "Script timed out"));
 
 	REQUIRE(watchdog.rearm(5ms));
-	CHECK_FALSE(watchdog.timeOut());
+	CHECK_FALSE(watchdog.timedOut());
 
 	auto result3 = lua.safe_script(boilerPlate);
 	CHECK(result3.valid());
