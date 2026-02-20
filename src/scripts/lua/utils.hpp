@@ -209,13 +209,14 @@ namespace lua::timeoutGuard
 				 lua_Hook hookFn = defaultHook)
 			: lua(lua),
 			  checkPeriod(checkPeriod > 0 ? checkPeriod : kDefaultCheckPeriod),
-			  hook(hookFn)
+			  hook(hookFn != nullptr ? hookFn : defaultHook)
 		{}
 
 		Watchdog(const Watchdog &) = delete;
 		Watchdog &operator=(const Watchdog &) = delete;
 		Watchdog(Watchdog &&) = delete;
 		Watchdog &operator=(Watchdog &&) = delete;
+
 		~Watchdog() { detach(); }
 
 		bool attach(sol::state_view newLua, bool force = false) noexcept;
@@ -226,7 +227,7 @@ namespace lua::timeoutGuard
 		[[nodiscard]]
 		bool armed() const noexcept { return running; }
 		[[nodiscard]]
-		bool timeOut() const noexcept { return context.isTimedOut(); }
+		bool timedOut() const noexcept { return context.isTimedOut(); }
 
 		bool arm(time::milliseconds limit) noexcept;
 		bool rearm(time::milliseconds limit) noexcept;
@@ -275,7 +276,7 @@ namespace lua::timeoutGuard
 		}
 
 		[[nodiscard]]
-		bool timedOut() const noexcept { return !disabled() && watchdog->timeOut(); }
+		bool timedOut() const noexcept { return !disabled() && watchdog->timedOut(); }
 
 	private:
 		void disable() noexcept { watchdog = nullptr; }
