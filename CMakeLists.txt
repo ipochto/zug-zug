@@ -45,7 +45,6 @@ set(engine_include_dirs
 
 set(engine_libraries
     cxxopts::cxxopts
-    fmt::fmt
     spdlog::spdlog
     lua::lua51
     sol2::sol2
@@ -58,7 +57,7 @@ target_sources(${engine_lib} PRIVATE
 )
 target_include_directories(${engine_lib} PUBLIC ${engine_include_dirs})
 
-target_compile_features(${engine_lib} PRIVATE cxx_std_20)
+target_compile_features(${engine_lib} PRIVATE cxx_std_23)
 target_link_libraries(${engine_lib} PUBLIC ${engine_libraries})
 
 set(is_gcc "$<CXX_COMPILER_ID:GNU>")

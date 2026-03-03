@@ -26,7 +26,7 @@ if(BUILD_TESTING)
         tests/zug-zug/scripts/lua/test_timeoutGuard.cpp
         tests/utils/test_filesystem.cpp
     )
-    target_compile_features(tests PRIVATE cxx_std_20)
+    target_compile_features(tests PRIVATE cxx_std_23)
     target_link_libraries(tests PRIVATE
         doctest::doctest
         zug-zug::engine

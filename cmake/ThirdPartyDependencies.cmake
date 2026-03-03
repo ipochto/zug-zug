@@ -11,17 +11,6 @@ if (NOT cxxopts_FOUND)
     FetchContent_MakeAvailable(cxxopts)
 endif()
 
-find_package(fmt CONFIG QUIET)
-if (NOT fmt_FOUND)
-    message(STATUS "fmt not found, fetching with FetchContent...")
-    FetchContent_Declare(
-        fmt
-        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-        GIT_TAG        11.2.0
-    )
-    FetchContent_MakeAvailable(fmt)
-endif()
-
 find_package(spdlog CONFIG QUIET)
 if (NOT spdlog_FOUND)
     message(STATUS "spdlog not found, fetching with FetchContent...")

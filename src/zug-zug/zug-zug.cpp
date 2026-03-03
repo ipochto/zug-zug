@@ -1,6 +1,6 @@
 #include <cxxopts.hpp>
-#include <fmt/base.h>
-#include <fmt/ranges.h>
+#include <filesystem>
+#include <print>
 #include <spdlog/spdlog.h>
 
 #include "utils/filesystem.hpp"
@@ -18,17 +18,23 @@ void parseCmdLineArguments(int argc, char* argv[])
 	
 	const auto unmatched = parsed.unmatched();
 	if (!unmatched.empty()) {
-		fmt::println("Unrecognized command line argument(s): {}\n", unmatched);
-		fmt::println("{}", options.help());
+		std::println("Unrecognized command line argument(s): {}", unmatched);
+		std::println("{}", options.help());
 		exit(1);
 	}	
 	if (parsed.count("help")) {
-		fmt::println("{}", options.help());
+		std::println("{}", options.help());
 		exit(0);
 	}
 	if (parsed.count("data")) {
-		const auto dataPath = parsed["data"].as<fs::path>();
-		spdlog::info("Using given data path: \"{}\"", dataPath.string());
+		const auto dataPath = fs::absolute(parsed["data"].as<fs::path>()).lexically_normal();
+		if (fs::exists(dataPath)) {
+			spdlog::info("Using given data path: \"{}\"", dataPath.string());
+			/// TODO: -> set in the game config
+		} else {
+			std::println("The specified path to game data does not exist: \"{}\"", dataPath.string());
+			exit(1);
+		}
 	}
 }
 

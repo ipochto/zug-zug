@@ -7,6 +7,7 @@
 #include "utils/filesystem.hpp"
 #include "utils/optional_ref.hpp"
 
+#include <expected>
 #include <map>
 #include <string_view>
 #include <vector>
@@ -136,7 +137,8 @@ private:
 	using LibsSandboxingRulesMap = std::map<sol::lib, LibSymbolsRules>;
 
 	[[nodiscard]]
-	static auto checkRulesFor(sol::lib lib) noexcept -> opt_cref<LibSymbolsRules>;
+	static auto checkRulesFor(sol::lib lib) noexcept
+		-> opt_cref<LibSymbolsRules>;
 
 	bool loadLib(sol::lib lib);
 
@@ -158,7 +160,7 @@ private:
 
 	[[nodiscard]]
 	auto checkIfAllowedToLoad(const fs::path &scriptFile) const
-		-> std::tuple<bool, std::string_view>;
+		-> std::expected<void, std::string_view>;
 
 	auto loadfileReplace(sol::stack_object fileName) -> ResultOrErrorMsg;
 	auto dofileReplace(sol::stack_object fileName) -> sol::protected_function_result;
