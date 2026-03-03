@@ -30,7 +30,7 @@ jobs:
       matrix:
         preset: [
             linux-clang-debug,
-            #linux-gcc-release
+            linux-gcc-release
         ]
 
     steps:
