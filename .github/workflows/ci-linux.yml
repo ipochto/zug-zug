@@ -29,23 +29,32 @@ jobs:
     strategy:
       matrix:
         preset: [
-            linux-clang-debug,
-            linux-gcc-release
+          linux-clang-debug,
+          linux-gcc-release
         ]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up GCC 15
+        # Need for clang also, because clang requires gcc-15 standard c++ lib
+        uses: egor-tensin/setup-gcc@v2
+        with:
+          version: 15
+          platform: x64
+
+      - name: Set up Clang
+        if: contains(matrix.preset, 'clang')
+        uses: egor-tensin/setup-clang@v2
+        with:
+          version: 21
+          platform: x64
+
       - name: Install Ninja
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build
-
-      - name: Install Clang
-        if: contains(matrix.preset, 'clang')
-        run: |
-          sudo apt-get install -y llvm clang
 
       - name: Configure CMake
         run: cmake --preset=${{ matrix.preset }}
