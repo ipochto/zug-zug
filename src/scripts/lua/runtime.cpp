@@ -1,6 +1,5 @@
 #include "lua/runtime.hpp"
 
-#include <fmt/core.h>
 #include <spdlog/spdlog.h>
 
 // clang-format off
@@ -98,18 +97,18 @@ auto LuaSandbox::run(std::string_view script)
 }
 
 auto LuaSandbox::checkIfAllowedToLoad(const fs::path &scriptFile) const
-	-> std::tuple<bool, std::string_view>
+	-> std::expected<void, std::string_view>
 {
 	if (!fs::exists(scriptFile)) {
-		return {false, "Attempting to run a non-existent script"};
+		return std::unexpected{"Attempting to run a non-existent script"};
 	}
 	if (!isPathAllowed(scriptFile)) {
-		return {false, "Attempting to run a script outside the allowed path"};
+		return std::unexpected{"Attempting to run a script outside the allowed path"};
 	}
 	if (lua::isBytecode(scriptFile)) {
-		return {false, "Attempting to run precompiled Lua bytecode"};
+		return std::unexpected{"Attempting to run precompiled Lua bytecode"};
 	}
-	return {true, {}};
+	return {};
 }
 
 auto LuaSandbox::runFile(const fs::path &scriptFile)
@@ -121,8 +120,8 @@ auto LuaSandbox::runFile(const fs::path &scriptFile)
 		return lua::makeFnCallResult(runtime->state, errMsg, sol::call_status::file);
 	};
 
-	if (const auto [isFileOk, errMsg] = checkIfAllowedToLoad(scriptFile); !isFileOk) {
-		return error(errMsg);
+	if (const auto result = checkIfAllowedToLoad(scriptFile); !result) {
+		return error(result.error());
 	}
 	return runtime->state.safe_script_file(scriptFile.string(), sandbox);
 }
@@ -146,13 +145,11 @@ auto LuaSandbox::loadfileReplace(sol::stack_object fileName)
 
 	if (!fileName.is<std::string>()) {
 		return makeError("Bad argument #1 to 'loadfile' (string expected)");
-
 	}
 	const auto filePath = toScriptPath(fileName.as<std::string>());
-	const auto &[isFileOk, fileErrMsg] = checkIfAllowedToLoad(filePath);
 
-	if (!isFileOk) {
-		return makeError(fileErrMsg);
+	if (const auto result = checkIfAllowedToLoad(filePath); !result) {
+		return makeError(result.error());
 	}
 	auto loadResult = lua.load_file(filePath.string(), sol::load_mode::text);
 	if (!loadResult.valid()) {
@@ -277,7 +274,8 @@ void LuaSandbox::loadSafePrint()
 	sandbox.set_function("print", &LuaSandbox::printReplace, this);
 }
 
-auto LuaSandbox::checkRulesFor(sol::lib lib) noexcept -> opt_cref<LibSymbolsRules>
+auto LuaSandbox::checkRulesFor(sol::lib lib) noexcept
+	-> opt_cref<LibSymbolsRules>
 {
 	if (const auto it = libsSandboxingRules.find(lib); it != libsSandboxingRules.end()) {
 		return it->second;
