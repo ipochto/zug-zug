@@ -271,8 +271,7 @@ namespace lua::timeoutGuard
 			if (disabled()) {
 				return false;
 			}
-			watchdog->disarm();
-			return watchdog->arm(limit);
+			return watchdog->rearm(limit);
 		}
 
 		[[nodiscard]]
